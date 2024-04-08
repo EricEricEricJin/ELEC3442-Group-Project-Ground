@@ -1,7 +1,12 @@
+# Copyright Eric Jin 2024
+
+
 import pygame
 import threading
 import time
 
+# Capatible with Thrustmaster TCA Officer Pack Airbus Edition
+# Joystick + throttle lever
 class Joysticks:
     def __init__(self) -> None:
         pygame.init()
@@ -29,7 +34,9 @@ class Joysticks:
                 self.sidestick_buttons_num = joystick.get_numbuttons()
                 self.sidestick_hats_num = joystick.get_numhats()
 
-
+        if (not self.sidestick) or (not self.throttle):
+            return False
+        
         return True
 
     def start(self)->None:

@@ -1,5 +1,5 @@
-# Copyright Jin Yushang Apr. 2024
-# Originally by Jin Yushang, Jul. 2020
+# Copyright Eric Jin 2020
+# Modified in 2024 by Eric Jin 
 
 from threading import Thread
 from socket import *
