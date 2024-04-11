@@ -10,17 +10,22 @@ import crc16
 
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 class groundCommand:
+    eng_1,eng_2 = 0, 0 
+    opmode_elevator, opmode_aileron, opmode_rudder = 0,0,0
     elevator, aileron, rudder = 0,0,0
-    eng_1,eng_2, thrust_1, thrust_2 = 0,0,0,0
-    op_mode, trim_elevator, trim_aileron = 0,0,0
+    thrust_1, thrust_2 = 0,0
+    trim_elevator, trim_aileron, trim_rudder = 0,0,0
+
     update_time_ms = 0
 
-    pack_format = "".join(["hhh", "BBHH", "Bhh", "I"])
+    pack_format = "".join(["=","B", "hhh", "HH", "hhh", "I"])
 
     def packed(self):
-        ret = struct.pack(self.pack_format, self.elevator, self.aileron, self.rudder,
-                          self.eng_1, self.eng_2, self.thrust_1, self.thrust_2,
-                          self.op_mode, self.trim_elevator, self.trim_aileron,
+        state_byte = (self.eng_1<<7)|(self.eng_2<<6)|(self.opmode_elevator<<4)|(self.opmode_aileron<<2)|(self.opmode_rudder)
+        ret = struct.pack(self.pack_format, state_byte,
+                          self.elevator, self.aileron, self.rudder,
+                          self.thrust_1, self.thrust_2,
+                          self.trim_elevator, self.trim_aileron, self.trim_rudder,
                           self.update_time_ms)
         crc = crc16.crc16(0xffff, ret, len(ret))
         crc_packed = struct.pack("H", crc)
@@ -38,12 +43,13 @@ class planeData:
 
     volt_main, volt_bus, volt_aux = 0,0,0
     altitude = 0
+    update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["hhh"*4, "H"*2, "B"*3, "H", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "H", "I", "H"])
 
     def size(self):
-        return 0
+        return struct.calcsize(self.pack_format)
     
     def unpack(self, packed):
         unpacked = struct.unpack(self.pack_format, packed)
@@ -56,15 +62,15 @@ class planeData:
             self.tof,                                     \
             self.air_spd,                                 \
             self.volt_main, self.volt_bus, self.volt_aux, \
-            self.altitude, self.crc_calc = unpacked
+            self.altitude, self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
             pass
 
 class Communication:
-    def __init__(self, ip, port, cmd, data):
-        self.server_addr = (ip, port)
-        self.my_addr = ("", port)
+    def __init__(self, my_port, server_ip, server_port, cmd, data):
+        self.server_addr = (server_ip, server_port)
+        self.my_addr = ("", my_port)
 
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.bind(self.my_addr)
@@ -87,13 +93,19 @@ class Communication:
     def _sending(self):
         while self.running:
             packed = self.cmd.packed()
+            print("send", packed)
             self.sock.sendto(packed, self.server_addr)
             time.sleep(self.send_period)
 
     def _recving(self):
         while self.running:
-            packed = self.sock.recv(self.data.size())
-            self.data.unpack(packed)
+            try:
+                print("size =", self.data.size())
+                packed = self.sock.recv(self.data.size())
+                print("packed =", packed)
+                self.data.unpack(packed)
+            except Exception as e:
+                print(e)
 
     def stop(self):
         self.running = False
@@ -101,6 +113,16 @@ class Communication:
         self.t_sending.join()
         self.t_recving.join()
 
+
+SERVER_IP = "154.221.20.43"
+SERVER_PORT = 1235
+MY_PORT = 1233
+
+cmd = groundCommand()
+data = planeData()
+
 if __name__ == "__main__":
-    ComTest = Communication()
-    ComTest.run()
+    ComTest = Communication(MY_PORT, SERVER_IP, SERVER_PORT, cmd, data)
+    cmd.thrust_1 = 123
+    cmd.thrust_2 = 234
+    ComTest.start(0.5)
