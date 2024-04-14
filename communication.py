@@ -22,6 +22,7 @@ class groundCommand:
 
     def packed(self):
         state_byte = (self.eng_1<<7)|(self.eng_2<<6)|(self.opmode_elevator<<4)|(self.opmode_aileron<<2)|(self.opmode_rudder)
+        print("state byte =", state_byte)
         ret = struct.pack(self.pack_format, state_byte,
                           self.elevator, self.aileron, self.rudder,
                           self.thrust_1, self.thrust_2,
@@ -53,7 +54,10 @@ class planeData:
     
     def unpack(self, packed):
         unpacked = struct.unpack(self.pack_format, packed)
-        if crc16.crc16(0xffff, packed, len(packed)-2) == unpacked[-1]:
+        # print("len packed =", len(packed))
+        crc_calc = crc16.crc16(0xffff, packed, len(packed)-2)
+        if crc_calc == unpacked[-1]:
+            # print("unpacked", unpacked)
             # checksum correct
             self.accel_x, self.accel_y, self.accel_z,     \
             self.omega_x, self.omega_y, self.omega_z,     \
@@ -65,7 +69,7 @@ class planeData:
             self.altitude, self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
-            pass
+            print("CRC error!", crc_calc, unpacked[-1])
 
 class Communication:
     def __init__(self, my_port, server_ip, server_port, cmd, data):
@@ -93,16 +97,16 @@ class Communication:
     def _sending(self):
         while self.running:
             packed = self.cmd.packed()
-            print("send", packed)
+            # print("send", packed)
             self.sock.sendto(packed, self.server_addr)
             time.sleep(self.send_period)
 
     def _recving(self):
         while self.running:
             try:
-                print("size =", self.data.size())
+                # print("size =", self.data.size())
                 packed = self.sock.recv(self.data.size())
-                print("packed =", packed)
+                # print("packed =", packed)
                 self.data.unpack(packed)
             except Exception as e:
                 print(e)
@@ -126,3 +130,6 @@ if __name__ == "__main__":
     cmd.thrust_1 = 123
     cmd.thrust_2 = 234
     ComTest.start(0.5)
+    while True:
+        print(data.angle_x)
+        time.sleep(0.5)

@@ -43,8 +43,22 @@ def crc16(crc, buf, size):
 
 if __name__ == "__main__":
     import struct
-    l = [0x14, 0x5e, 0x41, 0x87, 0x77, 0x12, 0xaa, 0xff]
-    b = struct.pack("BBBBBBBB", *l)
-    ret = crc16(0xffff, b, 8)
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "H", "I", "H"])
+    
+    data = [ 1234, 0, 0, 
+            0, 0, 0, 
+            0, 0, 0, 
+            0, 0, 0, 
+            0, 0,
+            0, 0, 0,
+            0, 0, 0x1f77]
+    
+    b = struct.pack(pack_format, *data)
+    print("bytes = ", end="")
+    for i in range(len(b)-2):
+        print(b[i], end=" ")
+    print()
+    # ret = crc16(0xffff, b, len(b))
+    ret = crc16(0xffff, b, len(b)-2)
     print(ret)
     print(len(b))

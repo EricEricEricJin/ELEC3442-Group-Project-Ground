@@ -1,14 +1,6 @@
-# Copyright Eric Jin 2020
-# Modified in 2024 by Eric Jin
-
-"""
-    Run on touch-scr tablet
-    Recv
-        pitch, roll, air-speed, gnd-speed, psr_alt, tof_alt, hdg, long, lat
-        FD_ON, tar_speed, tar_alt, tar_hdg, tar_long
-    and show them
-    Send nothing
-"""
+# Copyright Eric Jin 2020 and 2021
+# originally two files: pfd.py and ewd.py,
+# now merged and modified in 2024 by Eric Jin
 
 from tkinter import *
 from socket import *
@@ -31,10 +23,11 @@ class updateTest:
                 "CRUISE": True, "MANU": True, "FAC": True, "AP_HDG": True,
                 "TO/LD": True, "AUTO": True, "MCAS": True, "AP_ALT": True,
                 "AP_SPD": True
-            }
+            },
+            "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
+            "volt_main": 11.6
         }
         self.P = PFD()
-        
 
 
     def run(self):
@@ -44,46 +37,196 @@ class updateTest:
 
     def _service(self):
         while True:
-            self.data_list["pitch"] += 1
+            self.data_list["pitch"] -= 1
+            self.data_list["roll"] += 1
             self.P.update(self.data_list)
             sleep(1)
 
 
+class arcDial:
+    # by Eric Jin 2021 
+    def __init__(self, cvs, x0, y0, w, red_line):
+        # x0, y0: coordinate of center
+        self.cvs = cvs
 
+        self.w = w
+        self.x0 = x0
+        self.y0 = y0
+        self.red_line = red_line
+        self.arc_rad = self.w / 2 * 0.95
+
+        div_line_len_index = 0.05
+        self.cvs.create_arc(x0 + self.w / 2 - self.arc_rad, y0 + self.w / 2 - self.arc_rad, x0 + self.w / 2 + self.arc_rad,
+                            y0 + self.w / 2 + self.arc_rad, outline="white", start=0, extent=225, style=ARC, width=2)
+
+        if self.red_line <= 0:
+            color = "red"
+        else:
+            color = "white"
+
+        self.cvs.create_line(x0 + self.w / 2 - self.arc_rad / 1.4142, y0 + self.w / 2 + self.arc_rad / 1.4142, x0 + self.w / 2 -
+                             self.arc_rad / 1.4142 + self.w * div_line_len_index, y0 + self.w / 2 + self.arc_rad / 1.4142 - self.w * 0.05, fill=color, width=2)
+        self.cvs.create_text(x0 + self.w / 2 - self.arc_rad / 1.4142  + self.w * div_line_len_index * 2, y0 + self.w / 2 + self.arc_rad /
+                             1.4142 - self.w * div_line_len_index * 2, text="0", fill=color, font=("consolas", int(self.w / 15)))
+
+        if self.red_line <= 50:
+            color = "red"
+        else:
+            color = "white"
+
+        self.cvs.create_line(x0 + self.w / 2 - self.arc_rad / 1.4142, y0 + self.w / 2 - self.arc_rad / 1.4142, x0 + self.w / 2 - self.arc_rad / 1.4142 +
+                             self.w * div_line_len_index, y0 + self.w / 2 - self.arc_rad / 1.4142 + self.w * div_line_len_index, fill=color, width=2)
+        self.cvs.create_text(x0 + self.w / 2 - self.arc_rad / 1.4142 + self.w * div_line_len_index * 2, y0 + self.w / 2 - self.arc_rad /
+                             1.4142 + self.w * div_line_len_index * 2, text="50", fill=color, font=("consolas", int(self.w / 15)))
+
+        if self.red_line <= 100:
+            color = "red"
+        else:
+            color = "white"
+
+        self.cvs.create_line(x0 + self.w / 2 + self.arc_rad / 1.4142, y0 + self.w / 2 - self.arc_rad / 1.4142, x0 + self.w / 2 + self.arc_rad / 1.4142 -
+                             self.w * div_line_len_index, y0 + self.w / 2 - self.arc_rad / 1.4142 + self.w * div_line_len_index, fill=color, width=2)
+        self.cvs.create_text(x0 + self.w / 2 + self.arc_rad / 1.4142 - self.w * div_line_len_index * 2, y0 + self.w / 2 -
+                             self.arc_rad / 1.4142 + self.w * div_line_len_index * 2, text="100", fill=color, font=("consolas", int(self.w / 15)))
+
+        if self.red_line <= 125:
+            self.cvs.create_arc(x0 + self.w / 2 - self.arc_rad, y0 + self.w / 2 - self.arc_rad, x0 + self.w / 2 + self.arc_rad, y0 + self.w / 2 +
+                                self.arc_rad, outline="red", start=0, extent=(125 - red_line) / 125 * 225, style=ARC, width=2)
+
+        self.text = self.cvs.create_text(
+            x0 + self.w / 2, y0 + self.w * 0.75, text="---", fill="green", font=("consolas", int(self.w / 10)))
+        self.line = self.cvs.create_line(x0 - 10, y0 - 
+                                         10, x0 - 10, y0 - 10, fill="green", width=3)
+
+    def set_val(self, val, on=True):
+        if val < 0:
+            val = 0
+        elif val > 125:
+            val = 125
+
+        if val < self.red_line:
+            color = "green"
+        else:
+            color = "red"
+
+        if on:
+            self.cvs.itemconfigure(self.text, text=str(val), fill=color)
+            angle = (125 - val) / 125 * 225
+            self.cvs.coords(self.line, self.x0 + self.w / 2, self.y0 + self.w / 2, self.x0 + math.cos(
+                math.radians(angle)) * self.w / 2 + self.w / 2, self.y0 + self.w / 2 - math.sin(math.radians(angle)) * self.w / 2)
+        else:
+            self.cvs.itemconfigure(self.text, text="---", fill="green")
+            self.cvs.coords(self.line, self.x0 - 10, self.y0 - 10, self.x0 - 10, self.y0 - 10)
+
+
+
+
+class scaleChart:
+    # by Eric Jin 2021
+    def __init__(self, master, x0, y0, length, width, dir="V"):
+        """
+        x0, y0: left-up coord
+        dir: V: verticle
+        """
+        self.x0 = x0
+        self.y0 = y0
+        self.length = length
+        self.width = width
+        self.dir = dir
+
+        if self.dir == "V":
+            self.cvs = Canvas(master=master, width=int(self.width * 1.2),
+                              height=self.length, bg="black", highlightthickness=0)
+            self.cvs.create_rectangle(int(0.1 * self.width), 0, )
+        elif dir == "H":
+            self.cvs = Canvas(master=master, width=self.length,
+                              height=int(self.width * 1.2), bg="black", highlightthickness=0)
+
+        
+        pass
+
+    def set_val(self):
+        pass
+
+
+
+"""
+Abbr:
+STA:    status
+ATT:    attitude
+ALT:    altitude
+VS:     vertical speed
+HDG:    heading
+"""
 
 class PFD:
 
     """Recommanded H:W: 16:10"""
 
-    WIN_H = 1200
-    WIN_W = 800
+    # WIN_H = 1200
+    # WIN_W = 800
+
+    # STA_IND_H = int(WIN_H / 16)
+    # STA_IND_W = WIN_W
+    # STA_IND_X = 0
+    # STA_IND_Y = 0
+    
+    # SPEED_H = int(WIN_H / 3.2)
+    # SPEED_W = int(WIN_W / 5)
+    # SPEED_X = 0
+    # SPEED_Y = STA_IND_H
+
+    # ATT_A = int(min(WIN_H / 3.2, WIN_W / 2))
+    # ATT_X, ATT_Y = int(9 / 20 * WIN_W - 1 / 2 * ATT_A), int(7 / 32 * WIN_H - 1 / 2 * ATT_A)
+
+    # ALT_H = SPEED_H
+    # ALT_W = SPEED_W
+    # ALT_X = 7 / 10 * WIN_W
+    # ALT_Y = SPEED_Y
+
+    # VS_H = SPEED_H
+    # VS_W = int(SPEED_W / 2)
+    # VS_X = 9 / 10 * WIN_W
+    # VS_Y = SPEED_Y
+
+    # HDG_A = int(min(0.625 * WIN_H, WIN_W))
+    # HDG_X = 1 / 2 * (WIN_W - HDG_A)
+    # HDG_Y = SPEED_Y + SPEED_H + (WIN_H - SPEED_H - STA_IND_H - HDG_A) / 2
+
+    WIN_H = 900
+    WIN_W = 1200
 
     STA_IND_H = int(WIN_H / 16)
-    STA_IND_W = WIN_W
+    STA_IND_W = WIN_W / 2
     STA_IND_X = 0
     STA_IND_Y = 0
     
-    SPEED_H = int(WIN_H / 3.2)
-    SPEED_W = int(WIN_W / 5)
+    SPEED_H = int(WIN_H / 2 - STA_IND_H)
+    SPEED_W = WIN_W / 2 * 0.15
     SPEED_X = 0
     SPEED_Y = STA_IND_H
 
-    ATT_A = int(min(WIN_H / 3.2, WIN_W / 2))
-    ATT_X, ATT_Y = int(9 / 20 * WIN_W - 1 / 2 * ATT_A), int(7 / 32 * WIN_H - 1 / 2 * ATT_A)
+    ATT_A = WIN_W / 2 * 0.6
+    ATT_X, ATT_Y = WIN_W/2 * 0.15, SPEED_Y
 
     ALT_H = SPEED_H
     ALT_W = SPEED_W
-    ALT_X = 7 / 10 * WIN_W
+    ALT_X = WIN_W/2 * 0.75
     ALT_Y = SPEED_Y
 
     VS_H = SPEED_H
-    VS_W = int(SPEED_W / 2)
-    VS_X = 9 / 10 * WIN_W
+    VS_W = WIN_W/2 * 0.1
+    VS_X = WIN_W/2 * 0.9
     VS_Y = SPEED_Y
 
-    HDG_A = int(min(0.625 * WIN_H, WIN_W))
-    HDG_X = 1 / 2 * (WIN_W - HDG_A)
-    HDG_Y = SPEED_Y + SPEED_H + (WIN_H - SPEED_H - STA_IND_H - HDG_A) / 2
+    HDG_A = WIN_W / 2 * 0.75
+    HDG_X = 0
+    HDG_Y = WIN_H - HDG_A
+
+    # Engine monitor display
+    EWD_W = WIN_W / 2
+    EWD_H = HDG_A
+    EWD_X, EWD_Y = WIN_H/2, WIN_H - EWD_H
 
     def __init__(self):
         self.data_list = {}
@@ -114,6 +257,10 @@ class PFD:
         self.hdg_cvs = Canvas(master = self.root, height = self.HDG_A, width = self.HDG_A, bg = "black", highlightthickness = 0)
         self.hdg_cvs.place(x = self.HDG_X, y = self.HDG_Y)
         # NOTE: buyao yongman h
+        # ??? WTF is the comment 
+
+        self.ewd_cvs = Canvas(master = self.root, height = self.EWD_H, width = self.EWD_W, bg= "black", highlightthickness = 0)
+        self.ewd_cvs.place(x = self.EWD_X, y = self.EWD_Y)
 
         self._init_sta_ind()
         self._init_speed()
@@ -121,6 +268,7 @@ class PFD:
         self._init_alt()
         self._init_vs()
         self._init_hdg()
+        self._init_ewd()
 
     def _init_sta_ind(self):
         for i in range(3):
@@ -245,9 +393,12 @@ class PFD:
         self.hdg_val_text = self.hdg_cvs.create_text(self.HDG_A / 2, self.HDG_A / 2 - 4 * self.hdg_delta_r_of_circ - self.HDG_A / 32, text = "", fill = "white")
 
         # self.hdg_fd = 
-
-
-
+    
+    def _init_ewd(self):
+        # engine and warning display
+        block_w = self.EWD_W / 2
+        self.eng_ind_1 = arcDial(self.ewd_cvs, 0, 0, block_w, 100)
+        self.eng_ind_2 = arcDial(self.ewd_cvs, block_w, 0, block_w, 100)
         
 
     def run(self):
@@ -272,7 +423,10 @@ class PFD:
             self._update_att(self.data_list["pitch"], self.data_list["roll"])
             self._update_alt(self.data_list["psr_alt"], self.data_list["FD_ON"], self.data_list["tar_alt"])
             self._update_vs(self.data_list["vs"])
-            self._update_hdg(16)
+            self._update_hdg(self.data_list["hdg"])
+            self._update_ewd(self.data_list["eng_1"], self.data_list["thrust_1"], 0, 
+                             self.data_list["eng_2"], self.data_list["thrust_2"], 0,
+                             self.data_list["volt_main"])
             
             
             self.root.after(100, self._service)
@@ -432,6 +586,11 @@ class PFD:
         
         self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(hdg))
             
+
+    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat):
+        self.eng_ind_1.set_val(thrust1, eng1)
+        self.eng_ind_2.set_val(thrust2, eng2)
+        pass
 
 
     def _att_line_coord(self, a, r, p, l, d, n, u):
