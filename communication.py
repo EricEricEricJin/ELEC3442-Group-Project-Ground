@@ -16,9 +16,11 @@ class groundCommand:
     thrust_1, thrust_2 = 0,0
     trim_elevator, trim_aileron, trim_rudder = 0,0,0
 
+    sea_level_pa = 0
+
     update_time_ms = 0
 
-    pack_format = "".join(["=","B", "hhh", "HH", "hhh", "I"])
+    pack_format = "".join(["=","B", "hhh", "HH", "hhh", "I", "I"])
 
     def packed(self):
         state_byte = (self.eng_1<<7)|(self.eng_2<<6)|(self.opmode_elevator<<4)|(self.opmode_aileron<<2)|(self.opmode_rudder)
@@ -27,6 +29,7 @@ class groundCommand:
                           self.elevator, self.aileron, self.rudder,
                           self.thrust_1, self.thrust_2,
                           self.trim_elevator, self.trim_aileron, self.trim_rudder,
+                          self.sea_level_pa,
                           self.update_time_ms)
         crc = crc16.crc16(0xffff, ret, len(ret))
         crc_packed = struct.pack("H", crc)
@@ -43,11 +46,11 @@ class planeData:
     air_spd = 0
 
     volt_main, volt_bus, volt_aux = 0,0,0
-    altitude = 0
+    altitude, temperature = 0, 0
     update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "H", "I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "HH", "I", "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -66,7 +69,7 @@ class planeData:
             self.tof,                                     \
             self.air_spd,                                 \
             self.volt_main, self.volt_bus, self.volt_aux, \
-            self.altitude, self.update_time_ms, self.crc_calc = unpacked
+            self.altitude, self.temperature, self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
             print("CRC error!", crc_calc, unpacked[-1])
@@ -131,5 +134,5 @@ if __name__ == "__main__":
     cmd.thrust_2 = 234
     ComTest.start(0.5)
     while True:
-        print(data.angle_x)
+        print(data.altitude)
         time.sleep(0.5)

@@ -1,6 +1,8 @@
-# Copyright Eric Jin 2020 and 2021
+################################################################################
+# Copyright Eric Jin 2020
 # originally two files: pfd.py and ewd.py,
 # now merged and modified in 2024 by Eric Jin
+################################################################################
 
 from tkinter import *
 from socket import *
@@ -16,13 +18,12 @@ class updateTest:
             "air_speed": 0, "gnd_speed": 0, "accel": 0,
             "psr_alt": 0, "tof_alt": 0,"vs": 0,
             "hdg": 0,
-            "long": 0, "lat": 0,
             "FD_ON": True, 
-            "tar_speed": 10, "tar_alt": -10, "tar_hdg": 0, "tar_long": 0, "tar_lat": 0,
+            "tar_speed": 0, "tar_alt": 0, "tar_hdg": 0,
             "sta" : {
-                "CRUISE": True, "MANU": True, "FAC": True, "AP_HDG": True,
-                "TO/LD": True, "AUTO": True, "MCAS": True, "AP_ALT": True,
-                "AP_SPD": True
+                "AIL MANUAL": True, "ELE MANUAL": True, "RUD MANUAL": True,
+                "AIL STABLE": False, "ELE STABLE": False, "RUD STABLE": False,
+                "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
             },
             "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
             "volt_main": 11.6
@@ -41,6 +42,35 @@ class updateTest:
             self.data_list["roll"] += 1
             self.P.update(self.data_list)
             sleep(1)
+
+
+class infoBox:
+    def __init__(self, cvs, title, x0, y0, w, h, c, fontsize=12) -> None:
+        self.cvs = cvs
+        self.x0, self.y0, self.w, self.h = x0, y0, w, h
+        self.title = title
+        self.color = c
+
+        # self.box = self.cvs.create_rectangle(x0, y0, x0 + w, y0 + h, outline=self.color)
+        self.text_title = self.cvs.create_text(x0 + w / 2, y0, text=self.title, fill=self.color, font=("consolas", int(fontsize)))
+        self.text_content = self.cvs.create_text(x0 + w / 2, y0 + h/2, text="", fill=self.color, font=("consolas", int(fontsize)))
+        title_bounds = self.cvs.bbox(self.text_title)
+        side_length = (self.w - (title_bounds[2] - title_bounds[0])) / 2
+        self.box = self.cvs.create_line(x0 + side_length, y0,
+                             x0, y0, 
+                             x0, y0 + h,
+                             x0 + w, y0 + h,
+                             x0 + w, y0,
+                             x0 + w - side_length, y0, fill=self.color, width=2)
+
+    def set_content(self, txt):
+        self.cvs.itemconfigure(self.text_content, text=txt, fill=self.color)
+
+    def set_color(self, color):
+        self.color = color
+        self.cvs.itemconfigure(self.box, fill = self.color)
+        self.cvs.itemconfigure(self.text_title, fill = self.color)
+        self.cvs.itemconfigure(self.text_content, fill = self.color)
 
 
 class arcDial:
@@ -160,39 +190,6 @@ HDG:    heading
 """
 
 class PFD:
-
-    """Recommanded H:W: 16:10"""
-
-    # WIN_H = 1200
-    # WIN_W = 800
-
-    # STA_IND_H = int(WIN_H / 16)
-    # STA_IND_W = WIN_W
-    # STA_IND_X = 0
-    # STA_IND_Y = 0
-    
-    # SPEED_H = int(WIN_H / 3.2)
-    # SPEED_W = int(WIN_W / 5)
-    # SPEED_X = 0
-    # SPEED_Y = STA_IND_H
-
-    # ATT_A = int(min(WIN_H / 3.2, WIN_W / 2))
-    # ATT_X, ATT_Y = int(9 / 20 * WIN_W - 1 / 2 * ATT_A), int(7 / 32 * WIN_H - 1 / 2 * ATT_A)
-
-    # ALT_H = SPEED_H
-    # ALT_W = SPEED_W
-    # ALT_X = 7 / 10 * WIN_W
-    # ALT_Y = SPEED_Y
-
-    # VS_H = SPEED_H
-    # VS_W = int(SPEED_W / 2)
-    # VS_X = 9 / 10 * WIN_W
-    # VS_Y = SPEED_Y
-
-    # HDG_A = int(min(0.625 * WIN_H, WIN_W))
-    # HDG_X = 1 / 2 * (WIN_W - HDG_A)
-    # HDG_Y = SPEED_Y + SPEED_H + (WIN_H - SPEED_H - STA_IND_H - HDG_A) / 2
-
     WIN_H = 900
     WIN_W = 1200
 
@@ -229,7 +226,22 @@ class PFD:
     EWD_X, EWD_Y = WIN_H/2, WIN_H - EWD_H
 
     def __init__(self):
-        self.data_list = {}
+        self.data_list = {
+            "pitch": 0, "roll": 0, 
+            "air_speed": 0, "accel": 0,
+            "psr_alt": 0, "vs": 0,
+            "hdg": 0,
+            "long": 0, "lat": 0,
+            "FD_ON": True, 
+            "tar_speed": 10, "tar_alt": -10, "tar_hdg": 0, "tar_long": 0, "tar_lat": 0,
+            "sta" : {
+                "AIL MANUAL": True, "ELE MANUAL": True, "RUD MANUAL": True,
+                "AIL STABLE": False, "ELE STABLE": False, "RUD STABLE": False,
+                "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
+            },
+            "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
+            "volt_main": 11.6
+        }
         
         # self.COM = Communicate()
         # self.COM.send(b"pfd")
@@ -279,17 +291,16 @@ class PFD:
             self.sta_ind_cvs.create_line(coord, fill = "white")
 
         self.sta_ind_disp_text = [
-            ["CRUISE", "MANU", "FAC", "AP_HDG"],
-            ["TO/LD", "AUTO", "MCAS", "AP_ALT"],
-            ["", "", "", "AP_SPD"],
-            ["", "", "", ""]
+            ["AIL MANUAL", "ELE MANUAL", "RUD MANUAL"],
+            ["AIL STABLE", "ELE STABLE", "RUD STABLE"],
+            ["AIL LCKATT", "ELE LCKATT", "RUD LCKATT"],
         ]
 
         self.sta_ind_disp_mat = []
 
-        for i in range(4):
+        for i in range(len(self.sta_ind_disp_text)):
             self.sta_ind_disp_mat.append([])
-            for j in range(4):
+            for j in range(len(self.sta_ind_disp_text[0])):
                 coord = ((1 + 2 * j) / 8 * self.STA_IND_W, (1 + 2 * i) / 8 * self.STA_IND_H)
                 self.sta_ind_disp_mat[i].append(self.sta_ind_cvs.create_text(coord, text = self.sta_ind_disp_text[i][j], fill = "black"))
 
@@ -396,10 +407,15 @@ class PFD:
     
     def _init_ewd(self):
         # engine and warning display
-        block_w = self.EWD_W / 2
-        self.eng_ind_1 = arcDial(self.ewd_cvs, 0, 0, block_w, 100)
-        self.eng_ind_2 = arcDial(self.ewd_cvs, block_w, 0, block_w, 100)
+        block_w = 250
+        self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W - 2*block_w, (self.EWD_H - block_w) / 2, block_w, 100)
+        self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
         
+        # voltage display
+        self.vbat_disp = infoBox(self.ewd_cvs, "MAIN BAT", self.EWD_W / 2, self.EWD_H - 70, 100, 60, 'green')
+        self.vbat_disp.set_content("---")
+        self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", self.EWD_W / 2 + 120, self.EWD_H - 70, 100, 60, "green")
+        self.vbat_disp.set_content("---")
 
     def run(self):
         # t = Thread(target = self._service)
