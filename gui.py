@@ -74,7 +74,13 @@ class infoBox:
 
 
 class arcDial:
-    # by Eric Jin 2021 
+    """ 
+    Create arc dial chart with minimum = 0 and maximum = 100
+    cvs:        the canvas object
+    x0, y0:     position
+    w:          width and height
+    red_line:   if value is larger than red_line, will be displayed in red color
+    """
     def __init__(self, cvs, x0, y0, w, red_line):
         # x0, y0: coordinate of center
         self.cvs = cvs
@@ -129,6 +135,10 @@ class arcDial:
                                          10, x0 - 10, y0 - 10, fill="green", width=3)
 
     def set_val(self, val, on=True):
+        """
+        val: between 0 t0 125
+        on: if set to False, will display "---" and will not display bar
+        """
         if val < 0:
             val = 0
         elif val > 125:
@@ -152,34 +162,60 @@ class arcDial:
 
 
 class scaleChart:
-    # by Eric Jin 2021
-    def __init__(self, master, x0, y0, length, width, dir="V"):
-        """
-        x0, y0: left-up coord
-        dir: V: verticle
-        """
-        self.x0 = x0
-        self.y0 = y0
-        self.length = length
-        self.width = width
+    """
+    Create a scale chart
+    cvs: the master canvas object
+    x0, y0: position of left-up conner
+    w, h: width and height
+    c: color
+    title: title text
+    vmax, vmin: maximum and minimum value
+    dir: direction of the bar, "V" vertical or "H" horizontal
+    """
+    def __init__(self, cvs, x0, y0, w, h, c, title, vmax, vmin, dir="V", fontsize = 12):
+        self.cvs = cvs
+        self.x0, self.y0, self.w, self.h = x0, y0, w, h
+        self.length = w if dir == 'H' else h
         self.dir = dir
+        self.title = title
+        self.color = c
+        self.vmax, self.vmin = vmax, vmin
+
+        if self.dir == "H":
+            title_xy = x0 + w / 2, y0
+            value_xy = x0 + w / 2, y0 + h
+            box_bb = x0, y0 + 0.4 * h, x0 + w, y0 + 0.6 * h
+        elif self.dir == "V":
+            title_xy = x0 + w / 4, y0 + h / 4
+            value_xy = x0 + w / 4, y0 + h / 4 * 3
+            box_bb = x0 + w / 2 + w / 2 * 0.4, y0, x0 + w / 2 + w / 2 * 0.6, y0 + h
+
+        self.text_title = self.cvs.create_text(*title_xy, text=self.title, fill=self.color, font=("consolas", int(fontsize)))
+        self.text_value = self.cvs.create_text(*value_xy, text="", fill=self.color, font=("consolas", int(fontsize)))
+        self.box = self.cvs.create_rectangle(*box_bb, outline=self.color)
+        self.bar = None
+
+    def set_val(self, value):
+        """
+        value: between vmin and vmax
+        """
+        self.cvs.itemconfigure(self.text_value, text=round(value, 1))
 
         if self.dir == "V":
-            self.cvs = Canvas(master=master, width=int(self.width * 1.2),
-                              height=self.length, bg="black", highlightthickness=0)
-            self.cvs.create_rectangle(int(0.1 * self.width), 0, )
-        elif dir == "H":
-            self.cvs = Canvas(master=master, width=self.length,
-                              height=int(self.width * 1.2), bg="black", highlightthickness=0)
-
-        
-        pass
-
-    def set_val(self):
-        pass
-
-
-
+            bar_x0y0x1y1 = self.x0 + self.w / 2 + self.w / 2 * 0.35,                 \
+                           self.y0 + (value-self.vmin)/(self.vmax-self.vmin)*self.h, \
+                           self.x0 + self.w / 2 + self.w / 2 * 0.65,                 \
+                           self.y0 + (value-self.vmin)/(self.vmax-self.vmin)*self.h
+        elif self.dir == "H":
+            bar_x0y0x1y1 = self.x0 + (value-self.vmin)/(self.vmax-self.vmin)*self.w, \
+                            self.y0 + 0.35 * self.h,                                  \
+                            self.x0 + (value-self.vmin)/(self.vmax-self.vmin)*self.w, \
+                            self.y0 + 0.65 * self.h
+        if self.bar:
+            self.cvs.coords(self.bar, *bar_x0y0x1y1)
+        else:
+            self.bar = self.cvs.create_line(*bar_x0y0x1y1, fill=self.color)
+                
 """
 Abbr:
 STA:    status
@@ -222,18 +258,22 @@ class PFD:
 
     # Engine monitor display
     EWD_W = WIN_W / 2
-    EWD_H = HDG_A
-    EWD_X, EWD_Y = WIN_H/2, WIN_H - EWD_H
+    EWD_H = WIN_H / 2
+    EWD_X, EWD_Y = WIN_W/2, WIN_H / 2
+
+    # mechanical display
+    MD_W = WIN_W / 2
+    MD_H = WIN_H / 2
+    MD_X, MD_Y = WIN_W / 2, 0
 
     def __init__(self):
         self.data_list = {
             "pitch": 0, "roll": 0, 
-            "air_speed": 0, "accel": 0,
-            "psr_alt": 0, "vs": 0,
+            "air_speed": 0, "gnd_speed": 0, "accel": 0,
+            "psr_alt": 0, "tof_alt": 0,"vs": 0,
             "hdg": 0,
-            "long": 0, "lat": 0,
             "FD_ON": True, 
-            "tar_speed": 10, "tar_alt": -10, "tar_hdg": 0, "tar_long": 0, "tar_lat": 0,
+            "tar_speed": 0, "tar_alt": 0, "tar_hdg": 0,
             "sta" : {
                 "AIL MANUAL": True, "ELE MANUAL": True, "RUD MANUAL": True,
                 "AIL STABLE": False, "ELE STABLE": False, "RUD STABLE": False,
@@ -274,6 +314,9 @@ class PFD:
         self.ewd_cvs = Canvas(master = self.root, height = self.EWD_H, width = self.EWD_W, bg= "black", highlightthickness = 0)
         self.ewd_cvs.place(x = self.EWD_X, y = self.EWD_Y)
 
+        self.md_cvs = Canvas(master = self.root, height = self.MD_H, width = self.MD_W, bg= "black", highlightthickness = 0)
+        self.md_cvs.place(x = self.MD_X, y = self.MD_Y)
+
         self._init_sta_ind()
         self._init_speed()
         self._init_att()
@@ -281,6 +324,7 @@ class PFD:
         self._init_vs()
         self._init_hdg()
         self._init_ewd()
+        self._init_md()
 
     def _init_sta_ind(self):
         for i in range(3):
@@ -417,6 +461,10 @@ class PFD:
         self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", self.EWD_W / 2 + 120, self.EWD_H - 70, 100, 60, "green")
         self.vbat_disp.set_content("---")
 
+    def _init_md(self): # mechanical display
+        self.elevator_disp = scaleChart(self.md_cvs, 100, 100, 100, 100, "blue", "ELEVATOR", 1, -1, dir="V")
+        self.elevator_disp.set_val(0.85)
+
     def run(self):
         # t = Thread(target = self._service)
         # t.start()
@@ -430,7 +478,7 @@ class PFD:
         pass
     
     def get_state(self):
-        pass
+        return True
 
     def _service(self):
         try:
@@ -452,7 +500,7 @@ class PFD:
             pass
 
     def _update_sta_ind(self, sta_dict):
-        print(sta_dict)
+        # print(sta_dict)
         for i in range(len(self.sta_ind_disp_mat)):
             for j in range(len(self.sta_ind_disp_mat[i])):
                 if self.sta_ind_disp_text[i][j] != "":
@@ -486,7 +534,7 @@ class PFD:
 
     def _update_att(self, pitch, roll):
         long_center_line_coord = self._att_line_coord(self.ATT_A, roll, pitch, 2 * 1.42 * 13 / 8 * self.ATT_A, 1 / 8 * self.ATT_A, 0, 5)
-        print("LCLC: ", long_center_line_coord)
+        # print("LCLC: ", long_center_line_coord)
 
         if 45 < roll <= 135:
             # left
@@ -600,7 +648,7 @@ class PFD:
                 coord
             )
         
-        self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(hdg))
+        self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(round(hdg % 360)))
             
 
     def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat):

@@ -24,7 +24,7 @@ class groundCommand:
 
     def packed(self):
         state_byte = (self.eng_1<<7)|(self.eng_2<<6)|(self.opmode_elevator<<4)|(self.opmode_aileron<<2)|(self.opmode_rudder)
-        print("state byte =", state_byte)
+        # print("state byte =", state_byte)
         ret = struct.pack(self.pack_format, state_byte,
                           self.elevator, self.aileron, self.rudder,
                           self.thrust_1, self.thrust_2,
@@ -40,17 +40,17 @@ class planeData:
     accel_x, accel_y, accel_z = 0,0,0
     omega_x, omega_y, omega_z = 0,0,0
     mag_x, mag_y, mag_z = 0,0,0
-    angle_x, angle_y, angle_z = 0,0,0
+    roll, pitch, yaw = 0,0,0
 
     tof = 0
     air_spd = 0
 
     volt_main, volt_bus, volt_aux = 0,0,0
-    altitude, temperature = 0, 0
+    pressure, temperature = 0, 0
     update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "HH", "I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "I", "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -65,14 +65,31 @@ class planeData:
             self.accel_x, self.accel_y, self.accel_z,     \
             self.omega_x, self.omega_y, self.omega_z,     \
             self.mag_x, self.mag_y, self.mag_z,           \
-            self.angle_x, self.angle_y, self.angle_z,     \
+            self.roll, self.pitch, self.yaw,     \
             self.tof,                                     \
             self.air_spd,                                 \
             self.volt_main, self.volt_bus, self.volt_aux, \
-            self.altitude, self.temperature, self.update_time_ms, self.crc_calc = unpacked
+            self.pressure, self.temperature, self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
             print("CRC error!", crc_calc, unpacked[-1])
+
+    @staticmethod
+    def imu_r2r(x):
+        ret = x / 32768 * 180
+        return ret - 2 if ret >= 1 else ret
+
+    @staticmethod
+    def tmp_r2r(x):
+        return x / 10.0
+
+    @staticmethod
+    def psr_r2r(x):
+        return x / 2.0
+
+    @staticmethod
+    def vbat_r2r(x):
+        return x / 10 # todo
 
 class Communication:
     def __init__(self, my_port, server_ip, server_port, cmd, data):
@@ -134,5 +151,5 @@ if __name__ == "__main__":
     cmd.thrust_2 = 234
     ComTest.start(0.5)
     while True:
-        print(data.altitude)
+        print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
         time.sleep(0.5)
