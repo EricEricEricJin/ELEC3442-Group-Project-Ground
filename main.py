@@ -109,7 +109,6 @@ class Main:
             self.gui_data_dict["eng_2"] = self.i_cmd.eng_2
             self.gui_data_dict["thrust_2"] = self.i_cmd.thrust_2
 
-
             self.i_gui.update(self.gui_data_dict)
 
             # print(to_float(i_data.angle_x), "\t", to_float(i_data.angle_y), "\t", to_float(i_data.angle_z))   

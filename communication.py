@@ -47,10 +47,13 @@ class planeData:
 
     volt_main, volt_bus, volt_aux = 0,0,0
     pressure, temperature = 0, 0
+
+    elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
+
     update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "bbbb","I", "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -62,14 +65,16 @@ class planeData:
         if crc_calc == unpacked[-1]:
             # print("unpacked", unpacked)
             # checksum correct
-            self.accel_x, self.accel_y, self.accel_z,     \
-            self.omega_x, self.omega_y, self.omega_z,     \
-            self.mag_x, self.mag_y, self.mag_z,           \
-            self.roll, self.pitch, self.yaw,     \
-            self.tof,                                     \
-            self.air_spd,                                 \
-            self.volt_main, self.volt_bus, self.volt_aux, \
-            self.pressure, self.temperature, self.update_time_ms, self.crc_calc = unpacked
+            self.accel_x, self.accel_y, self.accel_z,   \
+            self.omega_x, self.omega_y, self.omega_z,   \
+            self.mag_x, self.mag_y, self.mag_z,         \
+            self.roll, self.pitch, self.yaw,            \
+            self.tof,   \
+            self.air_spd,   \
+            self.volt_main, self.volt_bus, self.volt_aux,   \
+            self.pressure, self.temperature,                \
+            self.elevator, self.aileron_l, self.aileron_r, self.rudder, \
+            self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
             print("CRC error!", crc_calc, unpacked[-1])
