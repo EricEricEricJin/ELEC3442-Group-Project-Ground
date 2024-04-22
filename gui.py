@@ -26,7 +26,7 @@ class updateTest:
                 "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
             },
             "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
-            "volt_main": 11.6
+            "volt_main": 11.6, "volt_bus": 5.0
         }
         self.P = PFD()
 
@@ -182,9 +182,9 @@ class scaleChart:
         self.vmax, self.vmin = vmax, vmin
 
         if self.dir == "H":
-            title_xy = x0 + w / 2, y0
-            value_xy = x0 + w / 2, y0 + h
-            box_bb = x0, y0 + 0.4 * h, x0 + w, y0 + 0.6 * h
+            title_xy = x0 + w / 2, y0 + fontsize
+            value_xy = x0 + w / 2, y0 + h - fontsize
+            box_bb = x0, y0 + 0.45 * h, x0 + w, y0 + 0.55 * h
         elif self.dir == "V":
             title_xy = x0 + w / 4, y0 + h / 4
             value_xy = x0 + w / 4, y0 + h / 4 * 3
@@ -275,12 +275,13 @@ class PFD:
             "FD_ON": True, 
             "tar_speed": 0, "tar_alt": 0, "tar_hdg": 0,
             "sta" : {
-                "AIL MANUAL": True, "ELE MANUAL": True, "RUD MANUAL": True,
+                "AIL MANUAL": False, "ELE MANUAL": False, "RUD MANUAL": False,
                 "AIL STABLE": False, "ELE STABLE": False, "RUD STABLE": False,
                 "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
             },
-            "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
-            "volt_main": 11.6
+            "eng_1": False, "eng_2": False, "thrust_1": 0, "thrust_2": 0,
+            "volt_main": 0.0, "volt_bus": 0.0,
+            "elevator": 0, "aileron_l": 0, "aileron_r": 0, "rudder": 0
         }
         
         # self.COM = Communicate()
@@ -462,8 +463,19 @@ class PFD:
         self.vbat_disp.set_content("---")
 
     def _init_md(self): # mechanical display
-        self.elevator_disp = scaleChart(self.md_cvs, 100, 100, 100, 100, "blue", "ELEVATOR", 1, -1, dir="V")
-        self.elevator_disp.set_val(0.85)
+        self.elevator_disp = scaleChart(self.md_cvs, 200, 100, 100, 100, "blue", "ELEVATOR", 1, -1, dir="V")
+        self.elevator_disp.set_val(0)
+
+        self.aileron_l_disp = scaleChart(self.md_cvs, 80, 100, 100, 100, "blue", "AILERON L", 1, -1, dir="V")
+        self.aileron_l_disp.set_val(0)
+
+        self.aileron_r_disp = scaleChart(self.md_cvs, 320, 100, 100, 100, "blue", "AILERON R", 1, -1, dir="V")
+        self.aileron_r_disp.set_val(0)
+
+        self.rudder_disp = scaleChart(self.md_cvs, 440, 100, 100, 100, "blue", "RUDDER", 1, -1, dir="H")
+        self.rudder_disp.set_val(0)
+
+
 
     def run(self):
         # t = Thread(target = self._service)
@@ -490,7 +502,7 @@ class PFD:
             self._update_hdg(self.data_list["hdg"])
             self._update_ewd(self.data_list["eng_1"], self.data_list["thrust_1"], 0, 
                              self.data_list["eng_2"], self.data_list["thrust_2"], 0,
-                             self.data_list["volt_main"])
+                             self.data_list["volt_main"], self.data_list["volt_bus"])
             
             
             self.root.after(100, self._service)
@@ -651,11 +663,11 @@ class PFD:
         self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(round(hdg % 360)))
             
 
-    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat):
+    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat, vbus):
         self.eng_ind_1.set_val(thrust1, eng1)
         self.eng_ind_2.set_val(thrust2, eng2)
-        pass
-
+        self.vbat_disp.set_content(str(round(vbat, 1)))
+        self.vbus_disp.set_content(str(round(vbus, 2)))
 
     def _att_line_coord(self, a, r, p, l, d, n, u):
         """

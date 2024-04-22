@@ -83,14 +83,32 @@ class Main:
             except:
                 pass
 
-            # Update data from communication to GUI
+            # Attitude
             self.gui_data_dict["pitch"] = communication.planeData.imu_r2r(self.i_data.roll)
             self.gui_data_dict["roll"] = -communication.planeData.imu_r2r(self.i_data.pitch)
             self.gui_data_dict["hdg"] = -communication.planeData.imu_r2r(self.i_data.yaw)
-            print(self.gui_data_dict["roll"], self.gui_data_dict["pitch"], self.gui_data_dict["pitch"])
+            # print(self.gui_data_dict["roll"], self.gui_data_dict["pitch"], self.gui_data_dict["pitch"])
 
+            # Altitude
             self.gui_data_dict["psr_alt"] = self.psr2alt(communication.planeData.psr_r2r(self.i_data.pressure), 996)
+            
+            # Voltage
             self.gui_data_dict["volt_main"] = communication.planeData.vbat_r2r(self.i_data.volt_main)
+            self.gui_data_dict["volt_bus"] = communication.planeData.vbus_r2r(self.i_data.volt_bus)
+
+            # Control surfaces
+            self.gui_data_dict["elevator"] = self.i_cmd.elevator / 32678.0
+            self.gui_data_dict["aileron_l"] = self.i_cmd.aileron / 32678.0
+            self.gui_data_dict["aileron_r"] = -self.i_cmd.aileron / 32678.0
+            self.gui_data_dict["rudder"] = self.i_cmd.rudder / 32678.0
+
+            # Engine
+            # currently use set values
+            self.gui_data_dict["eng_1"] = self.i_cmd.eng_1
+            self.gui_data_dict["thrust_1"] = self.i_cmd.thrust_1
+            self.gui_data_dict["eng_2"] = self.i_cmd.eng_2
+            self.gui_data_dict["thrust_2"] = self.i_cmd.thrust_2
+
 
             self.i_gui.update(self.gui_data_dict)
 

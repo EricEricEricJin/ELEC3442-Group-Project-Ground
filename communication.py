@@ -89,7 +89,14 @@ class planeData:
 
     @staticmethod
     def vbat_r2r(x):
-        return x / 10 # todo
+        return x / 255.0 * 12.9 # todo
+
+    @staticmethod
+    def vbus_r2r(x):
+        return x / 255.0 * 5.5
+    
+    def vaux_r2r(x):
+        return x / 255.0 * 4.3
 
 class Communication:
     def __init__(self, my_port, server_ip, server_port, cmd, data):
