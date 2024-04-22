@@ -89,7 +89,7 @@ class Main:
             self.gui_data_dict["hdg"] = -communication.planeData.imu_r2r(self.i_data.yaw)
             print(self.gui_data_dict["roll"], self.gui_data_dict["pitch"], self.gui_data_dict["pitch"])
 
-            self.gui_data_dict["psr_alt"] = communication.planeData.psr_r2r(self.i_data.pressure)
+            self.gui_data_dict["psr_alt"] = self.psr2alt(communication.planeData.psr_r2r(self.i_data.pressure), 996)
             self.gui_data_dict["volt_main"] = communication.planeData.vbat_r2r(self.i_data.volt_main)
 
             self.i_gui.update(self.gui_data_dict)
@@ -108,6 +108,12 @@ class Main:
 
         print("Exiting...")
         exit()
+
+    @staticmethod
+    def psr2alt(psr, qnh):
+        return 44330 * (1-pow((psr / 100) / qnh, 0.1903))
+
+
 
 
 if __name__ == "__main__":

@@ -588,7 +588,7 @@ class PFD:
             self.att_cvs.itemconfigure(self.att_texts[i], angle = -roll)
 
     def _update_alt(self, alt, fd_on, tar_alt):
-        self.alt_cvs.itemconfigure(self.alt_val_text, text = str(alt))
+        self.alt_cvs.itemconfigure(self.alt_val_text, text = str(round(alt)))
 
         for i in range(16):
             if i % 2:

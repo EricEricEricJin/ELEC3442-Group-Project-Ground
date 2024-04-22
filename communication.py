@@ -81,11 +81,11 @@ class planeData:
 
     @staticmethod
     def tmp_r2r(x):
-        return x / 10.0
+        return x / 100.0
 
     @staticmethod
     def psr_r2r(x):
-        return x / 2.0
+        return x / 10.0 + 1e5
 
     @staticmethod
     def vbat_r2r(x):
@@ -138,18 +138,21 @@ class Communication:
         self.t_recving.join()
 
 
-SERVER_IP = "154.221.20.43"
-SERVER_PORT = 1235
-MY_PORT = 1233
 
-cmd = groundCommand()
-data = planeData()
 
 if __name__ == "__main__":
+    SERVER_IP = "154.221.20.43"
+    SERVER_PORT = 1235
+    MY_PORT = 1233
+
+    cmd = groundCommand()
+    data = planeData()
+
     ComTest = Communication(MY_PORT, SERVER_IP, SERVER_PORT, cmd, data)
     cmd.thrust_1 = 123
     cmd.thrust_2 = 234
     ComTest.start(0.5)
     while True:
-        print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
+        # print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
+        print(psr2alt(planeData.psr_r2r(data.pressure), 996), planeData.tmp_r2r(data.temperature))
         time.sleep(0.5)
