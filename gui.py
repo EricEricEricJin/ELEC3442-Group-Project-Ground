@@ -16,7 +16,7 @@ class updateTest:
         self.data_list = {
             "pitch": 0, "roll": 0, 
             "air_speed": 0, "gnd_speed": 0, "accel": 0,
-            "psr_alt": 0, "tof_alt": 0,"vs": 0,
+            "psr_alt": 0, "tof_alt": 0,"vs": 0, "temperature": 0,
             "hdg": 0,
             "FD_ON": True, 
             "tar_speed": 0, "tar_alt": 0, "tar_hdg": 0,
@@ -273,7 +273,7 @@ class PFD:
         self.data_list = {
             "pitch": 0, "roll": 0, 
             "air_speed": 0, "gnd_speed": 0, "accel": 0,
-            "psr_alt": 0, "tof_alt": 0,"vs": 0,
+            "psr_alt": 0, "tof_alt": 0,"vs": 0, "temperature": 0,
             "hdg": 0,
             "FD_ON": True, 
             "tar_speed": 0, "tar_alt": 0, "tar_hdg": 0,
@@ -457,14 +457,18 @@ class PFD:
     def _init_ewd(self):
         # engine and warning display
         block_w = 200
-        self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W - 2*block_w, (self.EWD_H - block_w) / 2, block_w, 100)
-        self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
+        self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W / 2 - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
+        self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W / 2, (self.EWD_H - block_w) / 2, block_w, 100)
         
         # voltage display
-        self.vbat_disp = infoBox(self.ewd_cvs, "MAIN BAT", self.EWD_W / 2, self.EWD_H - 70, 100, 60, 'green')
+        self.vbat_disp = infoBox(self.ewd_cvs, "MAIN BAT", 10, self.EWD_H - 70, 100, 60, 'green')
         self.vbat_disp.set_content("---")
-        self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", self.EWD_W / 2 + 120, self.EWD_H - 70, 100, 60, "green")
+        self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", 130, self.EWD_H - 70, 100, 60, "green")
         self.vbat_disp.set_content("---")
+
+        # temperature
+        self.exttmp_disp = infoBox(self.ewd_cvs, "EXT TEMP", 250, self.EWD_H - 70, 100, 60, "green")
+        self.exttmp_disp.set_content("---")
 
     def _init_md(self): # mechanical display
         self.elevator_disp = scaleChart(self.md_cvs, 200, 100, 100, 100, "blue", "ELEVATOR", 1, -1, dir="V")
@@ -518,7 +522,7 @@ class PFD:
             self._update_hdg(self.data_list["hdg"])
             self._update_ewd(self.data_list["eng_1"], self.data_list["thrust_1"], 0, 
                              self.data_list["eng_2"], self.data_list["thrust_2"], 0,
-                             self.data_list["volt_main"], self.data_list["volt_bus"])
+                             self.data_list["volt_main"], self.data_list["volt_bus"], self.data_list["temperature"])
             self._update_md(self.data_list["elevator"], self.data_list["aileron_l"], self.data_list["aileron_r"], self.data_list["rudder"])
             
             self.root.after(100, self._service)
@@ -679,11 +683,12 @@ class PFD:
         self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(round(hdg % 360)))
             
 
-    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat, vbus):
+    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat, vbus, exttmp):
         self.eng_ind_1.set_val(thrust1, eng1)
         self.eng_ind_2.set_val(thrust2, eng2)
-        self.vbat_disp.set_content(str(round(vbat, 1)))
+        self.vbat_disp.set_content(str(round(vbat, 2)))
         self.vbus_disp.set_content(str(round(vbus, 2)))
+        self.exttmp_disp.set_content(str(round(exttmp, 2)))
     
     def _update_md(self, elevator, aileron_l, aileron_r, rudder):
         self.elevator_disp.set_val(elevator)
