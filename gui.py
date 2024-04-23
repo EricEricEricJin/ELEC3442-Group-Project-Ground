@@ -150,7 +150,7 @@ class arcDial:
             color = "red"
 
         if on:
-            self.cvs.itemconfigure(self.text, text=str(val), fill=color)
+            self.cvs.itemconfigure(self.text, text=str(round(val)), fill=color)
             angle = (125 - val) / 125 * 225
             self.cvs.coords(self.line, self.x0 + self.w / 2, self.y0 + self.w / 2, self.x0 + math.cos(
                 math.radians(angle)) * self.w / 2 + self.w / 2, self.y0 + self.w / 2 - math.sin(math.radians(angle)) * self.w / 2)
@@ -203,9 +203,9 @@ class scaleChart:
 
         if self.dir == "V":
             bar_x0y0x1y1 = self.x0 + self.w / 2 + self.w / 2 * 0.35,                 \
-                           self.y0 + (value-self.vmin)/(self.vmax-self.vmin)*self.h, \
+                           self.y0 + self.h - (value-self.vmin)/(self.vmax-self.vmin)*self.h, \
                            self.x0 + self.w / 2 + self.w / 2 * 0.65,                 \
-                           self.y0 + (value-self.vmin)/(self.vmax-self.vmin)*self.h
+                           self.y0 + self.h - (value-self.vmin)/(self.vmax-self.vmin)*self.h
         elif self.dir == "H":
             bar_x0y0x1y1 = self.x0 + (value-self.vmin)/(self.vmax-self.vmin)*self.w, \
                             self.y0 + 0.35 * self.h,                                  \
@@ -256,15 +256,18 @@ class PFD:
     HDG_X = 0
     HDG_Y = WIN_H - HDG_A
 
+    # mechanical display
+    MD_W = WIN_W / 2
+    MD_H = WIN_H / 4
+    MD_X, MD_Y = WIN_W / 2, 0
+
     # Engine monitor display
     EWD_W = WIN_W / 2
     EWD_H = WIN_H / 2
-    EWD_X, EWD_Y = WIN_W/2, WIN_H / 2
+    EWD_X, EWD_Y = WIN_W/2, WIN_H / 4
 
-    # mechanical display
-    MD_W = WIN_W / 2
-    MD_H = WIN_H / 2
-    MD_X, MD_Y = WIN_W / 2, 0
+    # Entry field
+    ETFD_X, ETFD_Y = WIN_W / 2, WIN_H / 4 * 3
 
     def __init__(self):
         self.data_list = {
@@ -326,6 +329,7 @@ class PFD:
         self._init_hdg()
         self._init_ewd()
         self._init_md()
+        self._init_entryfield()
 
     def _init_sta_ind(self):
         for i in range(3):
@@ -452,7 +456,7 @@ class PFD:
     
     def _init_ewd(self):
         # engine and warning display
-        block_w = 250
+        block_w = 200
         self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W - 2*block_w, (self.EWD_H - block_w) / 2, block_w, 100)
         self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
         
@@ -475,7 +479,13 @@ class PFD:
         self.rudder_disp = scaleChart(self.md_cvs, 440, 100, 100, 100, "blue", "RUDDER", 1, -1, dir="H")
         self.rudder_disp.set_val(0)
 
-
+    def _init_entryfield(self):
+        qnh_label = Label(text="QNH")
+        qnh_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 10, width=60)
+        qnh_label.config(bg="black", fg="green")
+        self.qnh_entry = Spinbox(from_=990, to=1100, increment=0.1)
+        self.qnh_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 10, width=60)
+        self.qnh_entry.config(bg="black", fg="green")
 
     def run(self):
         # t = Thread(target = self._service)
@@ -491,6 +501,12 @@ class PFD:
     
     def get_state(self):
         return True
+    
+    def get_qnh(self):
+        try:
+            return float(self.qnh_entry.get())
+        except:
+            return 0
 
     def _service(self):
         try:
@@ -503,7 +519,7 @@ class PFD:
             self._update_ewd(self.data_list["eng_1"], self.data_list["thrust_1"], 0, 
                              self.data_list["eng_2"], self.data_list["thrust_2"], 0,
                              self.data_list["volt_main"], self.data_list["volt_bus"])
-            
+            self._update_md(self.data_list["elevator"], self.data_list["aileron_l"], self.data_list["aileron_r"], self.data_list["rudder"])
             
             self.root.after(100, self._service)
 
@@ -668,6 +684,12 @@ class PFD:
         self.eng_ind_2.set_val(thrust2, eng2)
         self.vbat_disp.set_content(str(round(vbat, 1)))
         self.vbus_disp.set_content(str(round(vbus, 2)))
+    
+    def _update_md(self, elevator, aileron_l, aileron_r, rudder):
+        self.elevator_disp.set_val(elevator)
+        self.aileron_l_disp.set_val(aileron_l)
+        self.aileron_r_disp.set_val(aileron_r)
+        self.rudder_disp.set_val(rudder)
 
     def _att_line_coord(self, a, r, p, l, d, n, u):
         """

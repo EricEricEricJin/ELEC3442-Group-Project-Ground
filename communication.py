@@ -49,11 +49,12 @@ class planeData:
     pressure, temperature = 0, 0
 
     elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
+    eng_1, eng_2 = 0, 0
 
     update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "bbbb","I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "b"*6,"I", "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -74,6 +75,7 @@ class planeData:
             self.volt_main, self.volt_bus, self.volt_aux,   \
             self.pressure, self.temperature,                \
             self.elevator, self.aileron_l, self.aileron_r, self.rudder, \
+            self.eng_1, self.eng_2, \
             self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
@@ -164,7 +166,7 @@ if __name__ == "__main__":
     cmd.thrust_1 = 123
     cmd.thrust_2 = 234
     ComTest.start(0.5)
-    while True:
-        # print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
-        print(psr2alt(planeData.psr_r2r(data.pressure), 996), planeData.tmp_r2r(data.temperature))
-        time.sleep(0.5)
+    # while True:
+    #     # print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
+    #     print(psr2alt(planeData.psr_r2r(data.pressure), 996), planeData.tmp_r2r(data.temperature))
+    #     time.sleep(0.5)
