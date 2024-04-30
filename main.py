@@ -113,11 +113,14 @@ class Main:
             self.gui_data_dict["vs"] = (altitude - self.gui_data_dict["psr_alt"]) / 0.02 / 0.00508 # m/s, require filtering!!0.00508
             self.gui_data_dict["psr_alt"] = altitude
 
+            # temperatures
             self.gui_data_dict["temperature"] = communication.planeData.tmp_r2r(self.i_data.temperature)
+            self.gui_data_dict["cpu_tmp"] = communication.planeData.cputmp_r2r(self.i_data.cpu_temp)
 
             # Voltage
             self.gui_data_dict["volt_main"] = communication.planeData.vbat_r2r(self.i_data.volt_main)
             self.gui_data_dict["volt_bus"] = communication.planeData.vbus_r2r(self.i_data.volt_bus)
+            
 
             # Control surfaces
             self.gui_data_dict["elevator"] = self.i_data.elevator / 128

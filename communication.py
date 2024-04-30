@@ -50,11 +50,11 @@ class planeData:
 
     elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
     eng_1, eng_2 = 0, 0
-
+    cpu_temp = 0
     update_time_ms = 0
     crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "b"*6,"I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "b"*6, "h", "I", "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -76,6 +76,7 @@ class planeData:
             self.pressure, self.temperature,                \
             self.elevator, self.aileron_l, self.aileron_r, self.rudder, \
             self.eng_1, self.eng_2, \
+            self.cpu_temp, \
             self.update_time_ms, self.crc_calc = unpacked
         else:
             # checksum wrong
@@ -102,8 +103,13 @@ class planeData:
     def vbus_r2r(x):
         return x / 255.0 * 5.5
     
+    @staticmethod
     def vaux_r2r(x):
         return x / 255.0 * 4.3
+    
+    @staticmethod
+    def cputmp_r2r(x):
+        return x / 100.0
 
 class Communication:
     def __init__(self, my_port, server_ip, server_port, cmd, data):
