@@ -29,9 +29,19 @@ class Main:
         
         ports = communication.Communication.detect_ports()
         if (platform.system() == "Linux"):
-            port = ports["USB Serial"]
+            if "USB Serial" in ports:
+                port = ports["USB Serial"]
+            else:
+                print("No USB Serial found")
+                exit()
         elif (platform.system() == "Windows"):
-            port = ports["USB Serial"]
+            for p in ports:
+                if "CH340" in p:
+                    port = ports[p]
+                    break
+            else:
+                print("No CH340 found")
+                exit()
         else:
             print("Unknown platform")
             exit()
