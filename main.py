@@ -7,10 +7,7 @@ import video_stream
 
 class Main:
     
-    SERVER_IP = "154.221.20.43"
-    SERVER_PORT = 1235
-    MY_PORT = 1233
-    video_port = 1237
+    
     
     def __init__(self):
         print("Fixed Wing Plane Remote Control System")
@@ -27,16 +24,19 @@ class Main:
             # exit()
 
         print("Initializing communication...")        
-        print("Server IP:", self.SERVER_IP, "Server Port:", self.SERVER_PORT, "My Port:", self.MY_PORT)
+        ports = communication.Communication.detect_ports()
+        port = ports["USB Serial"]
+        print("Port:", port)
+
         self.i_data = communication.planeData()
         self.i_cmd = communication.groundCommand()
-        self.i_communication = communication.Communication(self.MY_PORT, self.SERVER_IP, self.SERVER_PORT, self.i_cmd, self.i_data)
+        self.i_communication = communication.Communication(port, self.i_cmd, self.i_data)
         self.i_communication.start(0.1)
         print("Done!")
 
         # Video
-        print("Initializing video...")
-        video_stream.start_video(self.SERVER_IP, self.video_port)
+        # print("Initializing video...")
+        # video_stream.start_video(self.SERVER_IP, self.video_port)
 
         print("Initializing GUI...")
         self.i_gui = gui.PFD()
@@ -53,14 +53,16 @@ class Main:
                 "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
             },
             "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
-            "volt_main": 11.6
+            "volt_main": 11.6, 
+            "volt_bus": 114514, "cpu_tmp": 1919, 
         }
+        print("dict init done")
 
         self.mainloop_thread = threading.Thread(target=self.logic_mainloop)
         self.mainloop_thread.start()
         self.i_gui.run()
+        print("Run!")
         self.mainloop_thread.join()
-        print("Done!")
 
 
     def logic_mainloop(self):
@@ -76,23 +78,23 @@ class Main:
             # Update commands from joysticks to communication
             try:
                 # control surface
-                ss_x, ss_y, ss_z = [x * 32767 for x in self.i_joysticks.get_ss_xyz()] # so ugly way
-                self.i_cmd.aileron = int(ss_x)
-                self.i_cmd.elevator = int(ss_y)
-                self.i_cmd.rudder = int(ss_z)
+                x, y, z = [x * 32767 for x in self.i_joysticks.get_xyz()] # so ugly way
+                self.i_cmd.aileron = int(x)
+                self.i_cmd.elevator = int(y)
+                self.i_cmd.rudder = int(z)
 
-                # throttles
-                th_t1, th_t2 = [int(x * 65535) for x in self.i_joysticks.get_th_thrust()]
-                th_eng1, th_eng2 = self.i_joysticks.get_th_engon()
-                self.i_cmd.eng_1 = int(th_eng1)
-                self.i_cmd.eng_2 = int(th_eng2)
-                self.i_cmd.thrust_1 = th_t1
-                self.i_cmd.thrust_2 = th_t2
+                # # throttles
+                # th_t1, th_t2 = [int(x * 65535) for x in self.i_joysticks.get_th_thrust()]
+                # th_eng1, th_eng2 = self.i_joysticks.get_th_engon()
+                # self.i_cmd.eng_1 = int(th_eng1)
+                # self.i_cmd.eng_2 = int(th_eng2)
+                # self.i_cmd.thrust_1 = th_t1
+                # self.i_cmd.thrust_2 = th_t2
             except:
                 pass
 
             # Update QNH
-            self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
+            # self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
 
             # Attitude
             self.gui_data_dict["pitch"] = communication.planeData.imu_r2r(self.i_data.roll)
@@ -115,11 +117,11 @@ class Main:
 
             # temperatures
             self.gui_data_dict["temperature"] = communication.planeData.tmp_r2r(self.i_data.temperature)
-            self.gui_data_dict["cpu_tmp"] = communication.planeData.cputmp_r2r(self.i_data.cpu_temp)
+            # self.gui_data_dict["cpu_tmp"] = communication.planeData.cputmp_r2r(self.i_data.cpu_temp)
 
             # Voltage
             self.gui_data_dict["volt_main"] = communication.planeData.vbat_r2r(self.i_data.volt_main)
-            self.gui_data_dict["volt_bus"] = communication.planeData.vbus_r2r(self.i_data.volt_bus)
+            # self.gui_data_dict["volt_bus"] = communication.planeData.vbus_r2r(self.i_data.volt_bus)
             
 
             # Control surfaces
@@ -129,19 +131,20 @@ class Main:
             self.gui_data_dict["rudder"] = self.i_data.rudder / 128
 
             # Engine
-            # currently use set values
-            self.gui_data_dict["eng_1"] = self.i_data.eng_1 >= 0
-            self.gui_data_dict["thrust_1"] = self.i_data.eng_1
-            self.gui_data_dict["eng_2"] = self.i_data.eng_2 >= 0
-            self.gui_data_dict["thrust_2"] = self.i_data.eng_2
+            # # currently use set values
+            # self.gui_data_dict["eng_1"] = self.i_data.eng_1 >= 0
+            # self.gui_data_dict["thrust_1"] = self.i_data.eng_1
+            # self.gui_data_dict["eng_2"] = self.i_data.eng_2 >= 0
+            # self.gui_data_dict["thrust_2"] = self.i_data.eng_2
             # print(self.i_data.eng_1, self.i_data.eng_2)
 
+            # print("pitch = ", self.gui_data_dict["pitch"])
             self.i_gui.update(self.gui_data_dict)
 
             # print(to_float(i_data.angle_x), "\t", to_float(i_data.angle_y), "\t", to_float(i_data.angle_z))   
             # print(i_cmd.eng_1, i_cmd.eng_2)
 
-            time.sleep(0.02)
+            time.sleep(0.025)
 
         # Exit
         print("Stopping modules...")
@@ -162,3 +165,5 @@ class Main:
 
 if __name__ == "__main__":
     main = Main()
+    while True:
+        time.sleep(1)

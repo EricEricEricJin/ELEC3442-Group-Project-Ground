@@ -530,10 +530,10 @@ class PFD:
                              self.data_list["temperature"], self.data_list["cpu_tmp"])
             self._update_md(self.data_list["elevator"], self.data_list["aileron_l"], self.data_list["aileron_r"], self.data_list["rudder"])
             
-            self.root.after(100, self._service)
+            self.root.after(50, self._service)
 
         except Exception as e:
-            print(e)
+            print("GUI Error!", e)
             pass
 
     def _update_sta_ind(self, sta_dict):
@@ -623,6 +623,8 @@ class PFD:
         
         for i in range(26):
             self.att_cvs.itemconfigure(self.att_texts[i], angle = -roll)
+        
+        # print("update att", pitch, roll)
 
     def _update_alt(self, alt, fd_on, tar_alt):
         self.alt_cvs.itemconfigure(self.alt_val_text, text = str(round(alt)))

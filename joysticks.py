@@ -1,13 +1,18 @@
 # Copyright Eric Jin 2024
-
+# modified for SuperLink by Eric Jin in 2025
 
 import pygame
 import threading
 import time
 
-# Capatible with Thrustmaster TCA Officer Pack Airbus Edition
-# Joystick + throttle lever
 class Joysticks:
+    SW_DOWN = -1
+    SW_MID = 0
+    SW_UP = 1
+
+    BUTT_UP = 0
+    BUTT_DOWN = 1
+
     def __init__(self) -> None:
         pygame.init()
         self.clock = pygame.time.Clock()
@@ -18,26 +23,20 @@ class Joysticks:
     def identify(self)->bool:
         # assign joystick
         joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
-        
-        self.throttle = None
-        self.sidestick = None
 
-        for joystick in joysticks:
-            name = joystick.get_name()
-            if name == "TCA Q-Eng 1&2":
-                self.throttle = joystick
-                self.throttle_axes_num = joystick.get_numaxes()
-                self.throttle_buttons_num = self.throttle.get_numbuttons()
-            elif name == "T.A320 Pilot":
-                self.sidestick = joystick
-                self.sidestick_axes_num = joystick.get_numaxes()
-                self.sidestick_buttons_num = joystick.get_numbuttons()
-                self.sidestick_hats_num = joystick.get_numhats()
+        self.joystick = None
 
-        if (not self.sidestick) or (not self.throttle):
+        for js in joysticks:
+            name = js.get_name()
+            if "SL8" in name:
+                self.joystick = js
+                self.axes_num = js.get_numaxes()
+                self.buttons_num = js.get_numbuttons()
+                return True
+        else:
+            print("No SuperLink joystick detected.")
             return False
         
-        return True
 
     def start(self)->None:
         self.t = threading.Thread(target=self._read_thread)
@@ -55,47 +54,47 @@ class Joysticks:
                 if event.type == pygame.QUIT:
                     self.running = False
 
-            # update throttle interface
-            self.throttle_raw_axes = [round(self.throttle.get_axis(i), 3) for i in range(self.throttle_axes_num)]
-            self.throttle_raw_buttons = [self.throttle.get_button(i) for i in range(self.throttle_buttons_num)]
-            
             # update sidestick interface
-            self.sidestick_raw_axes = [round(self.sidestick.get_axis(i), 3) for i in range(self.sidestick_axes_num)]
-            self.sidestick_raw_buttons = [self.sidestick.get_button(i) for i in range(self.sidestick_buttons_num)]
-            self.sidestick_raw_hat = self.sidestick.get_hat(0)
+            self.raw_axes = [round(self.joystick.get_axis(i), 3) for i in range(self.axes_num)]
+            self.raw_buttons = [self.joystick.get_button(i) for i in range(self.buttons_num)]
 
             self.clock.tick(100)
     
-    def get_th_thrust(self):
-        return (1-self.throttle_raw_axes[0]) / 2, (1-self.throttle_raw_axes[1]) / 2
-    def get_th_redbut(self):
-        return self.throttle_raw_buttons[0], self.throttle_raw_buttons[1]
-    def get_th_engon(self):
-        return self.throttle_raw_buttons[2], self.throttle_raw_buttons[3]
-    def get_th_blackbut(self):
-        return self.throttle_raw_buttons[4], self.throttle_raw_buttons[5]
-    def get_th_crank(self):
-        return self.throttle_raw_buttons[6]
-    def get_th_start(self):
-        return self.throttle_raw_buttons[7]
     
-    def get_ss_xyz(self):
-        return self.sidestick_raw_axes[0], self.sidestick_raw_axes[1], self.sidestick_raw_axes[2]
-    def get_ss_lever(self):
-        return self.sidestick_raw_axes[3]
-    def get_ss_trigger(self): # (down, up)
-        return self.sidestick_raw_buttons[0], self.sidestick_raw_buttons[1]
-    def get_ss_blackbut(self):
-        return self.sidestick_raw_buttons[2]
-    def get_ss_redbut(self):
-        return self.sidestick_raw_buttons[3]
-    def get_ss_leftkey(self):
-        return self.sidestick[10], self.sidestick[11], self.sidestick[12], self.sidestick[15], self.sidestick[14], self.sidestick[13]
-    def get_ss_rightkey(self):
-        return self.sidestick[6], self.sidestick[5], self.sidestick[4], self.sidestick[7], self.sidestick[8], self.sidestick[9]
-    def get_ss_hat(self):
-        return self.sidestick_raw_hat
+    def get_xyz(self):
+        return self.raw_axes[0], self.raw_axes[1], self.raw_axes[3]
+    
+    def get_lever(self):
+        return self.raw_axes[2]
+    
+    def get_sw_left(self): # (down, mid, up)
+        if self.raw_axes[6] < -0.5:
+            return self.SW_DOWN
+        elif self.raw_axes[6] > 0.5:
+            return self.SW_UP
+        else:
+            return self.SW_MID
+        
+    def get_sw_right(self):
+        if self.raw_axes[4] < -0.5:
+            return self.SW_DOWN
+        elif self.raw_axes[4] > 0.5:
+            return self.SW_UP
+        else:
+            return self.SW_MID
+        
+    def get_butt_mid(self):
+        if (self.raw_buttons[1] == 1):
+            return self.BUTT_DOWN
+        else:
+            return self.BUTT_UP
 
+    def get_butt_left(self):
+        if (self.raw_axes[5] >0):
+            return self.BUTT_DOWN
+        else:
+            return self.BUTT_UP
+    
 
 if __name__ == "__main__":
     j = Joysticks()
@@ -104,7 +103,7 @@ if __name__ == "__main__":
     try:
         for i in range(100):
             # print(j.get_th_thrust_1(), j.get_th_thrust_2())
-            print(j.get_ss_xyz())
+            print(j.get_xyz())
             time.sleep(0.1)
     except:
         pass

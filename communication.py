@@ -5,56 +5,60 @@ from threading import Thread
 from socket import *
 import struct
 import time
-import crc16
-
+from crc16 import crc16
+from crc8 import crc8
+import serial
+import serial.tools.list_ports
 
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 class groundCommand:
-    eng_1,eng_2 = 0, 0 
-    opmode_elevator, opmode_aileron, opmode_rudder = 0,0,0
+    sea_level_pa = 1e5
+
+    # opmode_elevator, opmode_aileron, opmode_rudder = 0,0,0
+    SOF = 0xA5
+    CMD_ID = 0x02
+
     elevator, aileron, rudder = 0,0,0
-    thrust_1, thrust_2 = 0,0
-    trim_elevator, trim_aileron, trim_rudder = 0,0,0
+    thrust = 0
+    left_sw, right_sw = 0, 0
+    mid_butt, left_butt = 0, 0
 
-    sea_level_pa = 0
 
-    update_time_ms = 0
-
-    pack_format = "".join(["=","B", "hhh", "HH", "hhh", "I", "I"])
+    payload_pack_format = "".join(["=", "hhh", "B"])
+    head_pack_format = "".join(["=", "B", "B", "H"])
 
     def packed(self):
-        state_byte = (self.eng_1<<7)|(self.eng_2<<6)|(self.opmode_elevator<<4)|(self.opmode_aileron<<2)|(self.opmode_rudder)
-        # print("state byte =", state_byte)
-        ret = struct.pack(self.pack_format, state_byte,
-                          self.elevator, self.aileron, self.rudder,
-                          self.thrust_1, self.thrust_2,
-                          self.trim_elevator, self.trim_aileron, self.trim_rudder,
-                          self.sea_level_pa,
-                          self.update_time_ms)
-        crc = crc16.crc16(0xffff, ret, len(ret))
-        crc_packed = struct.pack("H", crc)
-        return ret + crc_packed
+        payload = struct.pack(self.payload_pack_format, 
+                              self.rudder, self.elevator, self.aileron,
+                              (self.left_sw << 6) | (self.right_sw << 4) | (self.mid_butt << 1) | (self.left_butt) )
+        payload_len = len(payload)
+
+        buf = struct.pack(self.head_pack_format, self.SOF, self.CMD_ID, payload_len)
+        crc8_val = crc8(0xff, buf, len(buf))
+        buf += struct.pack("B", crc8_val)
+        
+        buf += payload
+        crc16_val = crc16(0xffff, payload, payload_len)
+        buf += struct.pack("H", crc16_val)
+
+        return buf        
 
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 class planeData:
+    # SOF = 0xA5
+    # DATA_ID = 0x03
+
     accel_x, accel_y, accel_z = 0,0,0
     omega_x, omega_y, omega_z = 0,0,0
     mag_x, mag_y, mag_z = 0,0,0
     roll, pitch, yaw = 0,0,0
 
-    tof = 0
-    air_spd = 0
-
-    volt_main, volt_bus, volt_aux = 0,0,0
+    volt_main = 0
     pressure, temperature = 0, 0
 
     elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
-    eng_1, eng_2 = 0, 0
-    cpu_temp = 0
-    update_time_ms = 0
-    crc_calc = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H"*2, "B"*3, "hh", "b"*6, "h", "I", "H"])
+    pack_format = "".join(["=", "hhh"*4, "B", "hh", "b"*4, "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -62,7 +66,8 @@ class planeData:
     def unpack(self, packed):
         unpacked = struct.unpack(self.pack_format, packed)
         # print("len packed =", len(packed))
-        crc_calc = crc16.crc16(0xffff, packed, len(packed)-2)
+        crc_calc = crc16(0xffff, packed, len(packed)-2)
+
         if crc_calc == unpacked[-1]:
             # print("unpacked", unpacked)
             # checksum correct
@@ -70,14 +75,11 @@ class planeData:
             self.omega_x, self.omega_y, self.omega_z,   \
             self.mag_x, self.mag_y, self.mag_z,         \
             self.roll, self.pitch, self.yaw,            \
-            self.tof,   \
-            self.air_spd,   \
-            self.volt_main, self.volt_bus, self.volt_aux,   \
+            self.volt_main,                                \
             self.pressure, self.temperature,                \
-            self.elevator, self.aileron_l, self.aileron_r, self.rudder, \
-            self.eng_1, self.eng_2, \
-            self.cpu_temp, \
-            self.update_time_ms, self.crc_calc = unpacked
+            self.elevator, self.aileron_l, self.aileron_r, self.rudder, _ \
+                  = unpacked
+            # print("roll, yaw, pitch", self.roll, self.yaw, self.pitch)
         else:
             # checksum wrong
             print("CRC error!", crc_calc, unpacked[-1])
@@ -112,15 +114,20 @@ class planeData:
         return x / 100.0
 
 class Communication:
-    def __init__(self, my_port, server_ip, server_port, cmd, data):
-        self.server_addr = (server_ip, server_port)
-        self.my_addr = ("", my_port)
-
-        self.sock = socket(AF_INET, SOCK_DGRAM)
-        self.sock.bind(self.my_addr)
+    def __init__(self, port, cmd, data):
+        self.ser = serial.Serial(port, 115200, timeout=None)
 
         self.cmd = cmd
         self.data = data
+
+    @staticmethod
+    def detect_ports():
+        ports = serial.tools.list_ports.comports()
+        ret = dict()
+        for p in ports:
+            ret[p.description] = p.device
+        return ret
+    
 
     def start(self, send_period):
 
@@ -138,22 +145,29 @@ class Communication:
         while self.running:
             packed = self.cmd.packed()
             # print("send", packed)
-            self.sock.sendto(packed, self.server_addr)
+            self.ser.write(packed)
             time.sleep(self.send_period)
 
     def _recving(self):
         while self.running:
             try:
                 # print("size =", self.data.size())
-                packed = self.sock.recv(self.data.size())
-                # print("packed =", packed)
-                self.data.unpack(packed)
+                if self.ser.read(1) == b'\xa5':
+                    head = b'\xa5' + self.ser.read(4)
+                    sof, cmd_id, payload_len, crc8_val = struct.unpack("=BBHB", head)
+                    if crc8(0xff, head, 4) != crc8_val:
+                        print("CRC error!")
+                        continue
+                    
+                    # print("head", head, sof, cmd_id, payload_len)
+                    payload = self.ser.read(payload_len+2)
+                    self.data.unpack(payload)
             except Exception as e:
                 print(e)
 
     def stop(self):
         self.running = False
-        self.sock.shutdown(SHUT_RDWR)
+        self.ser.close()
         self.t_sending.join()
         self.t_recving.join()
 
@@ -161,17 +175,20 @@ class Communication:
 
 
 if __name__ == "__main__":
-    SERVER_IP = "154.221.20.43"
-    SERVER_PORT = 1235
-    MY_PORT = 1233
+    ports = Communication.detect_ports()
+    
+    port = ports["USB Serial"]
+    print(port)
 
     cmd = groundCommand()
     data = planeData()
 
-    ComTest = Communication(MY_PORT, SERVER_IP, SERVER_PORT, cmd, data)
-    cmd.thrust_1 = 123
-    cmd.thrust_2 = 234
+    ComTest = Communication(port, cmd, data)
     ComTest.start(0.5)
+
+    while True:
+        print(data.pitch)
+        time.sleep(0.5)
     # while True:
     #     # print(planeData.imu_r2r(data.roll), planeData.imu_r2r(data.pitch), planeData.imu_r2r(data.yaw))
     #     print(psr2alt(planeData.psr_r2r(data.pressure), 996), planeData.tmp_r2r(data.temperature))
