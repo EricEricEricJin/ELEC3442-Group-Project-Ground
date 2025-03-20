@@ -5,6 +5,8 @@ import pygame
 import threading
 import time
 
+import platform
+
 class Joysticks:
     SW_DOWN = -1
     SW_MID = 0
@@ -68,9 +70,12 @@ class Joysticks:
         return self.raw_axes[2]
     
     def get_sw_left(self): # (down, mid, up)
-        if self.raw_axes[6] < -0.5:
+        sw_left_idx = 6
+        if platform.system() == "Windows":
+            sw_left_idx = 7
+        if self.raw_axes[sw_left_idx] < -0.5:
             return self.SW_DOWN
-        elif self.raw_axes[6] > 0.5:
+        elif self.raw_axes[sw_left_idx] > 0.5:
             return self.SW_UP
         else:
             return self.SW_MID

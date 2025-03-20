@@ -11,6 +11,7 @@ import serial
 import serial.tools.list_ports
 
 import platform
+import csv
 
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 
@@ -84,13 +85,41 @@ class planeData:
     volt_main = 0
     pressure, temperature = 0, 0
 
-    elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
+    elevator, aileron, rudder_l, rudder_r = 0, 0, 0, 0
 
     pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "H"])
 
+    LOG_FILE_NAME = "log.csv"
+
+    def __init__(self):
+        self.f = open(self.LOG_FILE_NAME, "w")
+        self.cw = csv.writer(self.f)
+        self.cw.writerow(["accel_x", "accel_y", "accel_z",
+                          "omega_x", "omega_y", "omega_z",
+                          "mag_x", "mag_y", "mag_z",
+                          "roll", "pitch", "yaw",
+                          "volt_main",
+                          "pressure", "temperature",
+                          "elevator", "aileron", "rudder_l", "rudder_r"])
+        self.f.flush()
+
+    def __del__(self):
+        self.f.close()
+
+
     def size(self):
         return struct.calcsize(self.pack_format)
-    
+
+    def log_to_file(self):
+        self.cw.writerow([self.accel_x, self.accel_y, self.accel_z, 
+                          self.omega_x, self.omega_y, self.omega_z, 
+                          self.mag_x, self.mag_y, self.mag_z, 
+                          self.roll, self.pitch, self.yaw, 
+                          self.volt_main, 
+                          self.pressure, self.temperature, 
+                          self.elevator, self.aileron, self.rudder_l, self.rudder_r])
+        self.f.flush()
+
     def unpack(self, packed):
         unpacked = struct.unpack(self.pack_format, packed)
         # print("len packed =", len(packed))
@@ -105,8 +134,11 @@ class planeData:
             self.roll, self.pitch, self.yaw,            \
             self.volt_main,                                \
             self.pressure, self.temperature,                \
-            self.elevator, self.aileron_l, self.aileron_r, self.rudder, _ \
+            self.elevator, self.aileron, self.rudder_l, self.rudder_r, _ \
                   = unpacked
+            
+            self.log_to_file()
+
             # print("roll, yaw, pitch", self.roll, self.yaw, self.pitch)
         else:
             # checksum wrong

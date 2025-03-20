@@ -476,16 +476,16 @@ class PFD:
 
 
     def _init_md(self): # mechanical display
-        self.elevator_disp = scaleChart(self.md_cvs, 200, 100, 100, 100, "blue", "ELEVATOR", 1, -1, dir="V")
+        self.elevator_disp = scaleChart(self.md_cvs, 200, 100, 100, 100, "blue", "ELEVATOR", 45, -45, dir="V")
         self.elevator_disp.set_val(0)
 
-        self.aileron_l_disp = scaleChart(self.md_cvs, 80, 100, 100, 100, "blue", "AILERON L", 1, -1, dir="V")
+        self.aileron_l_disp = scaleChart(self.md_cvs, 80, 100, 100, 100, "blue", "AILERON L", 45, -45, dir="V")
         self.aileron_l_disp.set_val(0)
 
-        self.aileron_r_disp = scaleChart(self.md_cvs, 320, 100, 100, 100, "blue", "AILERON R", 1, -1, dir="V")
+        self.aileron_r_disp = scaleChart(self.md_cvs, 320, 100, 100, 100, "blue", "AILERON R", 45, -45, dir="V")
         self.aileron_r_disp.set_val(0)
 
-        self.rudder_disp = scaleChart(self.md_cvs, 440, 100, 100, 100, "blue", "RUDDER", 1, -1, dir="H")
+        self.rudder_disp = scaleChart(self.md_cvs, 440, 100, 100, 100, "blue", "RUDDER", 45, -45, dir="H")
         self.rudder_disp.set_val(0)
 
 

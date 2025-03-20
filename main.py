@@ -53,7 +53,7 @@ class Main:
         self.i_mode = communication.modeCommand()
         self.i_pid = communication.pidCommand()
         self.i_communication = communication.Communication(port, self.i_cmd, self.i_data, self.i_mode, self.i_pid)
-        self.i_communication.start(0.1)
+        self.i_communication.start(0.05)
         print("Done!")
 
         # Video
@@ -103,7 +103,7 @@ class Main:
                 # control surface
                 x, y, z = [x * 32767 for x in self.i_joysticks.get_xyz()] # so ugly way
                 self.i_cmd.aileron = int(x)
-                self.i_cmd.elevator = int(y)
+                self.i_cmd.elevator = -int(y)
                 self.i_cmd.rudder = int(z)
 
                 # mode setting
@@ -122,8 +122,8 @@ class Main:
             self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
 
             # Attitude
-            self.gui_data_dict["pitch"] = communication.planeData.imu_r2r(self.i_data.roll)
-            self.gui_data_dict["roll"] = -communication.planeData.imu_r2r(self.i_data.pitch)
+            self.gui_data_dict["pitch"] = -communication.planeData.imu_r2r(self.i_data.pitch)
+            self.gui_data_dict["roll"] = -communication.planeData.imu_r2r(self.i_data.roll)
             self.gui_data_dict["hdg"] = -communication.planeData.imu_r2r(self.i_data.yaw)
             # print(self.gui_data_dict["roll"], self.gui_data_dict["pitch"], self.gui_data_dict["pitch"])
 
@@ -150,10 +150,12 @@ class Main:
             
 
             # Control surfaces
-            self.gui_data_dict["elevator"] = self.i_data.elevator / 128
-            self.gui_data_dict["aileron_l"] = self.i_data.aileron_l / 128
-            self.gui_data_dict["aileron_r"] = self.i_data.aileron_r / 128
-            self.gui_data_dict["rudder"] = self.i_data.rudder / 128
+            self.gui_data_dict["elevator"] = self.i_data.elevator
+            self.gui_data_dict["aileron_l"] = self.i_data.aileron
+            self.gui_data_dict["aileron_r"] = -self.i_data.aileron
+            self.gui_data_dict["rudder"] = self.i_data.rudder_l
+
+            # print(self.gui_data_dict["pitch"])
 
             # Engine
             # # currently use set values
