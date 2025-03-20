@@ -3,12 +3,10 @@ import gui
 import joysticks
 import time
 import threading
-import video_stream
+# import video_stream
+import platform
 
 class Main:
-    
-    
-    
     def __init__(self):
         print("Fixed Wing Plane Remote Control System")
         print("Copyright Eric Jin 2024")
@@ -24,13 +22,22 @@ class Main:
             # exit()
 
         print("Initializing communication...")        
+        
         ports = communication.Communication.detect_ports()
-        port = ports["USB Serial"]
+        if (platform.system() == "Linux"):
+            port = ports["USB Serial"]
+        elif (platform.system() == "Windows"):
+            port = ports["USB Serial"]
+        else:
+            print("Unknown platform")
+            exit()
+        
         print("Port:", port)
 
         self.i_data = communication.planeData()
-        self.i_cmd = communication.groundCommand()
-        self.i_communication = communication.Communication(port, self.i_cmd, self.i_data)
+        self.i_cmd = communication.stickCommand()
+        self.i_mode = communication.modeCommand()
+        self.i_communication = communication.Communication(port, self.i_cmd, self.i_data, self.i_mode)
         self.i_communication.start(0.1)
         print("Done!")
 
@@ -70,6 +77,7 @@ class Main:
         alt_queue = []
         ALT_QUEUE_LEN = 25
 
+
         while True:
             gui_state = self.i_gui.get_state()
             if gui_state == False:
@@ -83,13 +91,15 @@ class Main:
                 self.i_cmd.elevator = int(y)
                 self.i_cmd.rudder = int(z)
 
-                # # throttles
-                # th_t1, th_t2 = [int(x * 65535) for x in self.i_joysticks.get_th_thrust()]
-                # th_eng1, th_eng2 = self.i_joysticks.get_th_engon()
-                # self.i_cmd.eng_1 = int(th_eng1)
-                # self.i_cmd.eng_2 = int(th_eng2)
-                # self.i_cmd.thrust_1 = th_t1
-                # self.i_cmd.thrust_2 = th_t2
+                # mode setting
+                mode_sw = self.i_joysticks.get_sw_left()
+                if mode_sw == self.i_joysticks.SW_UP:
+                    self.i_mode.mode = 1
+                elif mode_sw == self.i_joysticks.SW_MID:
+                    self.i_mode.mode = 2
+                elif mode_sw == self.i_joysticks.SW_DOWN:
+                    self.i_mode.mode = 3
+
             except:
                 pass
 

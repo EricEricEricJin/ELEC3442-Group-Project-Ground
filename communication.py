@@ -10,38 +10,54 @@ from crc8 import crc8
 import serial
 import serial.tools.list_ports
 
+import platform
+
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
-class groundCommand:
+
+def pack_payload_to_buf(cmd_id, payload):
+    SOF = 0xA5
+    head_pack_format = "".join(["=", "B", "B", "H"])
+    payload_len = len(payload)
+
+    buf = struct.pack(head_pack_format, SOF, cmd_id, payload_len)
+    crc8_val = crc8(0xff, buf, len(buf))
+    buf += struct.pack("B", crc8_val)
+    
+    buf += payload
+    crc16_val = crc16(0xffff, payload, payload_len)
+    buf += struct.pack("H", crc16_val)
+
+    return buf
+
+
+class stickCommand:
     sea_level_pa = 1e5
 
-    # opmode_elevator, opmode_aileron, opmode_rudder = 0,0,0
-    SOF = 0xA5
     CMD_ID = 0x02
 
     elevator, aileron, rudder = 0,0,0
-    thrust = 0
+    # thrust = 0
     left_sw, right_sw = 0, 0
     mid_butt, left_butt = 0, 0
 
-
     payload_pack_format = "".join(["=", "hhh", "B"])
-    head_pack_format = "".join(["=", "B", "B", "H"])
 
-    def packed(self):
+    def __bytes__(self):
         payload = struct.pack(self.payload_pack_format, 
                               self.rudder, self.elevator, self.aileron,
                               (self.left_sw << 6) | (self.right_sw << 4) | (self.mid_butt << 1) | (self.left_butt) )
-        payload_len = len(payload)
-
-        buf = struct.pack(self.head_pack_format, self.SOF, self.CMD_ID, payload_len)
-        crc8_val = crc8(0xff, buf, len(buf))
-        buf += struct.pack("B", crc8_val)
         
-        buf += payload
-        crc16_val = crc16(0xffff, payload, payload_len)
-        buf += struct.pack("H", crc16_val)
+        return pack_payload_to_buf(self.CMD_ID, payload)
 
-        return buf        
+
+class modeCommand:
+    CMD_ID = 0xff
+    mode = 0
+
+    def __bytes__(self):
+        payload = struct.pack("=B", self.mode)
+        return pack_payload_to_buf(self.CMD_ID, payload)
+
 
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 class planeData:
@@ -113,12 +129,17 @@ class planeData:
     def cputmp_r2r(x):
         return x / 100.0
 
+
+
 class Communication:
-    def __init__(self, port, cmd, data):
+    def __init__(self, port, cmd, data, mode):
         self.ser = serial.Serial(port, 115200, timeout=None)
 
         self.cmd = cmd
         self.data = data
+        self.mode = mode
+
+        self.prev_mode_val = None
 
     @staticmethod
     def detect_ports():
@@ -143,9 +164,13 @@ class Communication:
 
     def _sending(self):
         while self.running:
-            packed = self.cmd.packed()
+            if (self.mode.mode != self.prev_mode_val):
+                self.prev_mode_val = self.mode.mode
+                self.ser.write(bytes(self.mode))
+
+            b = bytes(self.cmd)
             # print("send", packed)
-            self.ser.write(packed)
+            self.ser.write(b)
             time.sleep(self.send_period)
 
     def _recving(self):
@@ -180,10 +205,11 @@ if __name__ == "__main__":
     port = ports["USB Serial"]
     print(port)
 
-    cmd = groundCommand()
+    cmd = stickCommand()
     data = planeData()
+    mode = modeCommand()
 
-    ComTest = Communication(port, cmd, data)
+    ComTest = Communication(port, cmd, data, mode)
     ComTest.start(0.5)
 
     while True:
