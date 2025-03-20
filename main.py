@@ -7,6 +7,10 @@ import threading
 import platform
 
 class Main:
+    def _update_pid(self):
+        self.i_pid.pitch_kp, self.i_pid.pitch_ki, self.i_pid.pitch_kd, self.i_pid.pitch_me, self.i_pid.pitch_mo, self.i_pid.pitch_il, self.i_pid.roll_kp, self.i_pid.roll_ki, self.i_pid.roll_kd, self.i_pid.roll_me, self.i_pid.roll_mo, self.i_pid.roll_il = self.i_gui.get_pid_param()
+        self.i_communication.pid_send = 1
+
     def __init__(self):
         print("Fixed Wing Plane Remote Control System")
         print("Copyright Eric Jin 2024")
@@ -37,7 +41,8 @@ class Main:
         self.i_data = communication.planeData()
         self.i_cmd = communication.stickCommand()
         self.i_mode = communication.modeCommand()
-        self.i_communication = communication.Communication(port, self.i_cmd, self.i_data, self.i_mode)
+        self.i_pid = communication.pidCommand()
+        self.i_communication = communication.Communication(port, self.i_cmd, self.i_data, self.i_mode, self.i_pid)
         self.i_communication.start(0.1)
         print("Done!")
 
@@ -46,7 +51,7 @@ class Main:
         # video_stream.start_video(self.SERVER_IP, self.video_port)
 
         print("Initializing GUI...")
-        self.i_gui = gui.PFD()
+        self.i_gui = gui.PFD(self._update_pid)
         self.gui_data_dict = {
             "pitch": 0, "roll": 0, 
             "air_speed": 0, "gnd_speed": 0, "accel": 0,
@@ -60,7 +65,7 @@ class Main:
                 "AIL LCKATT": False, "ELE LCKATT": False, "RUD LCKATT": False,
             },
             "eng_1": True, "eng_2": True, "thrust_1": 12.3, "thrust_2": 23.4,
-            "volt_main": 11.6, 
+            "volt_main": 114514, 
             "volt_bus": 114514, "cpu_tmp": 1919, 
         }
         print("dict init done")
@@ -104,7 +109,7 @@ class Main:
                 pass
 
             # Update QNH
-            # self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
+            self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
 
             # Attitude
             self.gui_data_dict["pitch"] = communication.planeData.imu_r2r(self.i_data.roll)

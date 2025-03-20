@@ -269,7 +269,8 @@ class PFD:
     # Entry field
     ETFD_X, ETFD_Y = WIN_W / 2, WIN_H / 4 * 3
 
-    def __init__(self):
+    def __init__(self, pid_set_callback):
+        self.pid_set_callback = pid_set_callback
         self.data_list = {
             "pitch": 0, "roll": 0, 
             "air_speed": 0, "gnd_speed": 0, "accel": 0,
@@ -487,13 +488,117 @@ class PFD:
         self.rudder_disp = scaleChart(self.md_cvs, 440, 100, 100, 100, "blue", "RUDDER", 1, -1, dir="H")
         self.rudder_disp.set_val(0)
 
+
+
+
     def _init_entryfield(self):
+        P_MIN = 0.5
+        P_MAX = 3
+        I_MIN = 0.1
+        I_MAX = 1
+        D_MIN = 0.1
+        D_MAX = 1
+        ME_MIN = 1
+        ME_MAX = 10
+        IL_MIN = 1
+        IL_MAX = 45
+        MO_MIN = 30
+        MO_MAX = 45
+
         qnh_label = Label(text="QNH")
         qnh_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 10, width=60)
         qnh_label.config(bg="black", fg="green")
         self.qnh_entry = Spinbox(from_=990, to=1100, increment=0.1)
         self.qnh_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 10, width=60)
         self.qnh_entry.config(bg="black", fg="green")
+
+        pitch_kp_label = Label(text="Pitch Kp")
+        pitch_kp_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 50, width=60)
+        pitch_kp_label.config(bg="black", fg="green")
+        self.pitch_kp_entry = Spinbox(from_=P_MIN, to=P_MAX, increment=0.1)
+        self.pitch_kp_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 50, width=60)
+        self.pitch_kp_entry.config(bg="black", fg="green")
+
+        pitch_ki_label = Label(text="Pitch Ki")
+        pitch_ki_label.place(x=self.ETFD_X + 160, y=self.ETFD_Y + 50, width=60)
+        pitch_ki_label.config(bg="black", fg="green")
+        self.pitch_ki_entry = Spinbox(from_=I_MIN, to=I_MAX, increment=0.1)
+        self.pitch_ki_entry.place(x = self.ETFD_X + 230, y = self.ETFD_Y + 50, width=60)
+        self.pitch_ki_entry.config(bg="black", fg="green")
+
+        pitch_kd_label = Label(text="Pitch Kd")
+        pitch_kd_label.place(x=self.ETFD_X + 310, y=self.ETFD_Y + 50, width=60)
+        pitch_kd_label.config(bg="black", fg="green")
+        self.pitch_kd_entry = Spinbox(from_=D_MIN, to=D_MAX, increment=0.1)
+        self.pitch_kd_entry.place(x = self.ETFD_X + 380, y = self.ETFD_Y + 50, width=60)
+        self.pitch_kd_entry.config(bg="black", fg="green")
+
+        pitch_max_err_label = Label(text="Pitch ME")
+        pitch_max_err_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 70, width=60)
+        pitch_max_err_label.config(bg="black", fg="green")
+        self.pitch_max_err_entry = Spinbox(from_=ME_MIN, to=ME_MAX, increment=1)
+        self.pitch_max_err_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 70, width=60)
+        self.pitch_max_err_entry.config(bg="black", fg="green")
+
+        pitch_int_limit_label = Label(text="Pitch IL")
+        pitch_int_limit_label.place(x=self.ETFD_X + 160, y=self.ETFD_Y + 70, width=60)
+        pitch_int_limit_label.config(bg="black", fg="green")
+        self.pitch_int_limit_entry = Spinbox(from_=IL_MIN, to=IL_MAX, increment=1)
+        self.pitch_int_limit_entry.place(x = self.ETFD_X + 230, y = self.ETFD_Y + 70, width=60)
+        self.pitch_int_limit_entry.config(bg="black", fg="green")
+
+        self.pitch_max_out_label = Label(text="Pitch MO")
+        self.pitch_max_out_label.place(x=self.ETFD_X + 310, y=self.ETFD_Y + 70, width=60)
+        self.pitch_max_out_label.config(bg="black", fg="green")
+        self.pitch_max_out_entry = Spinbox(from_=MO_MIN, to=MO_MAX, increment=0.1)
+        self.pitch_max_out_entry.place(x = self.ETFD_X + 380, y = self.ETFD_Y + 70, width=60)
+        self.pitch_max_out_entry.config(bg="black", fg="green")
+
+        roll_kp_label = Label(text="Roll Kp")
+        roll_kp_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 100, width=60)
+        roll_kp_label.config(bg="black", fg="green")
+        self.roll_kp_entry = Spinbox(from_=P_MIN, to=P_MAX, increment=0.1)
+        self.roll_kp_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 100, width=60)
+        self.roll_kp_entry.config(bg="black", fg="green")
+
+        roll_ki_label = Label(text="Roll Ki") 
+        roll_ki_label.place(x=self.ETFD_X + 160, y=self.ETFD_Y + 100, width=60)
+        roll_ki_label.config(bg="black", fg="green")
+        self.roll_ki_entry = Spinbox(from_=I_MIN, to=I_MAX, increment=0.1)
+        self.roll_ki_entry.place(x = self.ETFD_X + 230, y = self.ETFD_Y + 100, width=60)
+        self.roll_ki_entry.config(bg="black", fg="green")
+
+        roll_kd_label = Label(text="Roll Kd")
+        roll_kd_label.place(x=self.ETFD_X + 310, y=self.ETFD_Y + 100, width=60)
+        roll_kd_label.config(bg="black", fg="green") 
+        self.roll_kd_entry = Spinbox(from_=D_MIN, to=D_MAX, increment=0.1)
+        self.roll_kd_entry.place(x = self.ETFD_X + 380, y = self.ETFD_Y + 100, width=60)
+        self.roll_kd_entry.config(bg="black", fg="green")
+
+        roll_max_err_label = Label(text="Roll ME")
+        roll_max_err_label.place(x=self.ETFD_X + 10, y=self.ETFD_Y + 120, width=60)
+        roll_max_err_label.config(bg="black", fg="green")
+        self.roll_max_err_entry = Spinbox(from_=ME_MIN, to=ME_MAX, increment=0.1) 
+        self.roll_max_err_entry.place(x = self.ETFD_X + 80, y = self.ETFD_Y + 120, width=60)
+        self.roll_max_err_entry.config(bg="black", fg="green")
+
+        roll_int_limit_label = Label(text="Roll IL")
+        roll_int_limit_label.place(x=self.ETFD_X + 160, y=self.ETFD_Y + 120, width=60)
+        roll_int_limit_label.config(bg="black", fg="green")
+        self.roll_int_limit_entry = Spinbox(from_=IL_MIN, to=IL_MAX, increment=0.1)
+        self.roll_int_limit_entry.place(x = self.ETFD_X + 230, y = self.ETFD_Y + 120, width=60)
+        self.roll_int_limit_entry.config(bg="black", fg="green")
+
+        roll_max_out_label = Label(text="Roll MO")
+        roll_max_out_label.place(x=self.ETFD_X + 310, y=self.ETFD_Y + 120, width=60)
+        roll_max_out_label.config(bg="black", fg="green")
+        self.roll_max_out_entry = Spinbox(from_=MO_MIN, to=MO_MAX, increment=0.1)
+        self.roll_max_out_entry.place(x = self.ETFD_X + 380, y = self.ETFD_Y + 120, width=60)
+        self.roll_max_out_entry.config(bg="black", fg="green")
+
+        pid_param_set_button = Button(text="Set PID", command=self.pid_set_callback)
+        pid_param_set_button.place(x=self.ETFD_X + 500, y=self.ETFD_Y + 65, width=60)
+        pid_param_set_button.config(bg="black", fg="green")
 
     def run(self):
         # t = Thread(target = self._service)
@@ -515,6 +620,24 @@ class PFD:
             return float(self.qnh_entry.get())
         except:
             return 0
+
+    def get_pid_param(self):
+        try:
+            return (float(self.pitch_kp_entry.get()), 
+                    float(self.pitch_ki_entry.get()),
+                    float(self.pitch_kd_entry.get()),
+                    float(self.pitch_max_err_entry.get()),
+                    float(self.pitch_max_out_entry.get()),
+                    float(self.pitch_int_limit_entry.get()),
+                    float(self.roll_kp_entry.get()), 
+                    float(self.roll_ki_entry.get()),
+                    float(self.roll_kd_entry.get()),
+                    float(self.roll_max_err_entry.get()),
+                    float(self.roll_max_out_entry.get()),
+                    float(self.roll_int_limit_entry.get())
+                )
+        except:
+            return (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     def _service(self):
         try:

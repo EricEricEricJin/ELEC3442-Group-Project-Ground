@@ -59,6 +59,18 @@ class modeCommand:
         return pack_payload_to_buf(self.CMD_ID, payload)
 
 
+class pidCommand:
+    CMD_ID = 0xee
+    pitch_kp, pitch_ki, pitch_kd, pitch_me, pitch_mo, pitch_il = 0, 0, 0, 0, 0, 0
+    roll_kp, roll_ki, roll_kd, roll_me, roll_mo, roll_il = 0, 0, 0, 0, 0, 0
+
+    def __bytes__(self):
+        payload = struct.pack(12*'f', 
+                              self.pitch_kp, self.pitch_ki, self.pitch_kd, self.pitch_me, self.pitch_mo, self.pitch_il,
+                              self.roll_kp, self.roll_ki, self.roll_kd, self.roll_me, self.roll_mo, self.roll_il)
+        return pack_payload_to_buf(self.CMD_ID, payload)
+
+
 # KEEP SYNCHRONIZED WITH PLANE CODE!!!
 class planeData:
     # SOF = 0xA5
@@ -74,7 +86,7 @@ class planeData:
 
     elevator, aileron_l, aileron_r, rudder = 0, 0, 0, 0
 
-    pack_format = "".join(["=", "hhh"*4, "B", "hh", "b"*4, "H"])
+    pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "H"])
 
     def size(self):
         return struct.calcsize(self.pack_format)
@@ -115,7 +127,8 @@ class planeData:
 
     @staticmethod
     def vbat_r2r(x):
-        return x / 255.0 * 12.9 # todo
+        # return x / 255.0 * 12.9 # todo
+        return x * 4.3 / 1000.0
 
     @staticmethod
     def vbus_r2r(x):
@@ -132,12 +145,15 @@ class planeData:
 
 
 class Communication:
-    def __init__(self, port, cmd, data, mode):
+    def __init__(self, port, cmd, data, mode, pid):
         self.ser = serial.Serial(port, 115200, timeout=None)
 
         self.cmd = cmd
         self.data = data
         self.mode = mode
+        self.pid = pid
+
+        self.pid_send = 0
 
         self.prev_mode_val = None
 
@@ -167,11 +183,19 @@ class Communication:
             if (self.mode.mode != self.prev_mode_val):
                 self.prev_mode_val = self.mode.mode
                 self.ser.write(bytes(self.mode))
+                print("mode changed to", self.mode.mode)
+            
+            if self.pid_send:
+                self.ser.write(bytes(self.pid))
+                print("pid changed to", self.pid.pitch_kp, self.pid.pitch_ki, self.pid.roll_kp, self.pid.roll_ki)
+                self.pid_send = 0
 
             b = bytes(self.cmd)
             # print("send", packed)
             self.ser.write(b)
             time.sleep(self.send_period)
+
+
 
     def _recving(self):
         while self.running:
@@ -189,6 +213,7 @@ class Communication:
                     self.data.unpack(payload)
             except Exception as e:
                 print(e)
+
 
     def stop(self):
         self.running = False
