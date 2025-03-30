@@ -31,12 +31,17 @@ class Main:
         if (platform.system() == "Linux"):
             if "USB Serial" in ports:
                 port = ports["USB Serial"]
+            elif "CP2102 USB to UART Bridge Controller - CP2102 USB to UART Bridge Controller" in ports:
+                port = ports["CP2102 USB to UART Bridge Controller - CP2102 USB to UART Bridge Controller"]
             else:
                 print("No USB Serial found")
                 exit()
         elif (platform.system() == "Windows"):
             for p in ports:
                 if "CH340" in p:
+                    port = ports[p]
+                    break
+                elif "CP210x" in p:
                     port = ports[p]
                     break
             else:
@@ -156,6 +161,7 @@ class Main:
             self.gui_data_dict["rudder"] = self.i_data.rudder_l
 
             # print(self.gui_data_dict["pitch"])
+            # print("state =", self.i_data.state)
 
             # Engine
             # # currently use set values
@@ -166,6 +172,7 @@ class Main:
             # print(self.i_data.eng_1, self.i_data.eng_2)
 
             # print("pitch = ", self.gui_data_dict["pitch"])
+            self.gui_data_dict["state"] = self.i_data.state
             self.i_gui.update(self.gui_data_dict)
 
             # print(to_float(i_data.angle_x), "\t", to_float(i_data.angle_y), "\t", to_float(i_data.angle_z))   

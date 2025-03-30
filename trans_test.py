@@ -69,6 +69,7 @@ if __name__ == "__main__":
     mp = opModePacket()
 
     ports = communication.Communication.detect_ports()
+    print(ports)
     port = ports["USB Serial"]
     ser = serial.Serial(port, 115200)
 

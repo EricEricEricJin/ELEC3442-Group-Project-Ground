@@ -1,6 +1,9 @@
 # Copyright Eric Jin 2020
 # Modified in 2024 by Eric Jin 
 
+# TRANS_BAUD = 115200
+TRANS_BAUD = 57600
+
 from threading import Thread
 from socket import *
 import struct
@@ -87,14 +90,19 @@ class planeData:
 
     elevator, aileron, rudder_l, rudder_r = 0, 0, 0, 0
 
-    pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "H"])
+    state = 0
+
+    pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "B", "H"])
 
     LOG_FILE_NAME = "log.csv"
 
     def __init__(self):
+
+        self.log_t0 = time.time()
+
         self.f = open(self.LOG_FILE_NAME, "w")
         self.cw = csv.writer(self.f)
-        self.cw.writerow(["accel_x", "accel_y", "accel_z",
+        self.cw.writerow(["timestamp", "accel_x", "accel_y", "accel_z",
                           "omega_x", "omega_y", "omega_z",
                           "mag_x", "mag_y", "mag_z",
                           "roll", "pitch", "yaw",
@@ -111,7 +119,8 @@ class planeData:
         return struct.calcsize(self.pack_format)
 
     def log_to_file(self):
-        self.cw.writerow([self.accel_x, self.accel_y, self.accel_z, 
+        self.cw.writerow([int((time.time() - self.log_t0) * 1000),
+                          self.accel_x, self.accel_y, self.accel_z, 
                           self.omega_x, self.omega_y, self.omega_z, 
                           self.mag_x, self.mag_y, self.mag_z, 
                           self.roll, self.pitch, self.yaw, 
@@ -122,22 +131,25 @@ class planeData:
 
     def unpack(self, packed):
         unpacked = struct.unpack(self.pack_format, packed)
-        # print("len packed =", len(packed))
+        print("len packed =", len(packed))
         crc_calc = crc16(0xffff, packed, len(packed)-2)
 
         if crc_calc == unpacked[-1]:
             # print("unpacked", unpacked)
             # checksum correct
-            self.accel_x, self.accel_y, self.accel_z,   \
-            self.omega_x, self.omega_y, self.omega_z,   \
-            self.mag_x, self.mag_y, self.mag_z,         \
-            self.roll, self.pitch, self.yaw,            \
-            self.volt_main,                                \
-            self.pressure, self.temperature,                \
-            self.elevator, self.aileron, self.rudder_l, self.rudder_r, _ \
-                  = unpacked
+            self.accel_x, self.accel_y, self.accel_z,                   \
+            self.omega_x, self.omega_y, self.omega_z,                   \
+            self.mag_x, self.mag_y, self.mag_z,                         \
+            self.roll, self.pitch, self.yaw,                            \
+            self.volt_main,                                             \
+            self.pressure, self.temperature,                            \
+            self.elevator, self.aileron, self.rudder_l, self.rudder_r,  \
+            self.state, _  = unpacked
             
-            self.log_to_file()
+            try:
+                self.log_to_file()
+            except Exception as e:
+                print("Log Error", e)
 
             # print("roll, yaw, pitch", self.roll, self.yaw, self.pitch)
         else:
@@ -160,7 +172,8 @@ class planeData:
     @staticmethod
     def vbat_r2r(x):
         # return x / 255.0 * 12.9 # todo
-        return x * 4.3 / 1000.0
+        CAL_COEFF = 1.314
+        return x * 4.3 / 1000.0 * CAL_COEFF
 
     @staticmethod
     def vbus_r2r(x):
@@ -178,7 +191,7 @@ class planeData:
 
 class Communication:
     def __init__(self, port, cmd, data, mode, pid):
-        self.ser = serial.Serial(port, 115200, timeout=None)
+        self.ser = serial.Serial(port, TRANS_BAUD, timeout=None)
 
         self.cmd = cmd
         self.data = data

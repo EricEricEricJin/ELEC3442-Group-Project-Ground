@@ -285,7 +285,8 @@ class PFD:
             },
             "eng_1": False, "eng_2": False, "thrust_1": 0, "thrust_2": 0,
             "volt_main": 0.0, "volt_bus": 0.0, "cpu_tmp": 0,
-            "elevator": 0, "aileron_l": 0, "aileron_r": 0, "rudder": 0
+            "elevator": 0, "aileron_l": 0, "aileron_r": 0, "rudder": 0,
+            "state": 0
         }
         
         # self.COM = Communicate()
@@ -458,22 +459,24 @@ class PFD:
     def _init_ewd(self):
         # engine and warning display
         block_w = 200
-        self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W / 2 - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
-        self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W / 2, (self.EWD_H - block_w) / 2, block_w, 100)
+        # self.eng_ind_1 = arcDial(self.ewd_cvs, self.EWD_W / 2 - block_w, (self.EWD_H - block_w) / 2, block_w, 100)
+        # self.eng_ind_2 = arcDial(self.ewd_cvs, self.EWD_W / 2, (self.EWD_H - block_w) / 2, block_w, 100)
         
         # voltage display
         self.vbat_disp = infoBox(self.ewd_cvs, "MAIN BAT", 10, self.EWD_H - 70, 100, 60, 'green')
         self.vbat_disp.set_content("---")
-        self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", 130, self.EWD_H - 70, 100, 60, "green")
-        self.vbat_disp.set_content("---")
+        # self.vbus_disp = infoBox(self.ewd_cvs, "BUS VOLT", 130, self.EWD_H - 70, 100, 60, "green")
+        # self.vbat_disp.set_content("---")
 
         # temperature
         self.exttmp_disp = infoBox(self.ewd_cvs, "EXT TEMP", 250, self.EWD_H - 70, 100, 60, "green")
         self.exttmp_disp.set_content("---")
 
-        self.cputmp_disp = infoBox(self.ewd_cvs, "CPU TEMP", 370, self.EWD_H - 70, 100, 60, "green")
-        self.cputmp_disp.set_content("---")
+        # self.cputmp_disp = infoBox(self.ewd_cvs, "CPU TEMP", 370, self.EWD_H - 70, 100, 60, "green")
+        # self.cputmp_disp.set_content("---")
 
+        self.state_disp = infoBox(self.ewd_cvs, "STATE", 490, self.EWD_H - 70, 100, 60, "orange")
+        self.state_disp.set_content("N/A")
 
     def _init_md(self): # mechanical display
         self.elevator_disp = scaleChart(self.md_cvs, 200, 100, 100, 100, "blue", "ELEVATOR", 45, -45, dir="V")
@@ -650,7 +653,7 @@ class PFD:
             self._update_ewd(self.data_list["eng_1"], self.data_list["thrust_1"], 0, 
                              self.data_list["eng_2"], self.data_list["thrust_2"], 0,
                              self.data_list["volt_main"], self.data_list["volt_bus"], 
-                             self.data_list["temperature"], self.data_list["cpu_tmp"])
+                             self.data_list["temperature"], self.data_list["cpu_tmp"], self.data_list["state"])
             self._update_md(self.data_list["elevator"], self.data_list["aileron_l"], self.data_list["aileron_r"], self.data_list["rudder"])
             
             self.root.after(50, self._service)
@@ -813,13 +816,15 @@ class PFD:
         self.hdg_cvs.itemconfigure(self.hdg_val_text, text = str(round(hdg % 360)))
             
 
-    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat, vbus, exttmp, cputmp):
-        self.eng_ind_1.set_val(thrust1, eng1)
-        self.eng_ind_2.set_val(thrust2, eng2)
+    def _update_ewd(self, eng1, thrust1, i1, eng2, thrust2, i2, vbat, vbus, exttmp, cputmp, state):
+        # self.eng_ind_1.set_val(thrust1, eng1)
+        # self.eng_ind_2.set_val(thrust2, eng2)
         self.vbat_disp.set_content(str(round(vbat, 2)))
-        self.vbus_disp.set_content(str(round(vbus, 2)))
+        # self.vbus_disp.set_content(str(round(vbus, 2)))
         self.exttmp_disp.set_content(str(round(exttmp, 2)))
-        self.cputmp_disp.set_content(str(round(cputmp, 2)))
+        # self.cputmp_disp.set_content(str(round(cputmp, 2)))
+
+        self.state_disp.set_content(str(state))
     
     def _update_md(self, elevator, aileron_l, aileron_r, rudder):
         self.elevator_disp.set_val(elevator)
