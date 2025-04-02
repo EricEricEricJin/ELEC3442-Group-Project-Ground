@@ -173,6 +173,18 @@ class Main:
 
             # print("pitch = ", self.gui_data_dict["pitch"])
             self.gui_data_dict["state"] = self.i_data.state
+
+            _manual = self.i_mode.mode == 2
+            _lckatt = self.i_mode.mode == 3
+
+            self.gui_data_dict["sta"]["AIL MANUAL"] = _manual 
+            self.gui_data_dict["sta"]["ELE MANUAL"] = _manual
+            self.gui_data_dict["sta"]["RUD MANUAL"] = _manual
+
+            self.gui_data_dict["sta"]["AIL LCKATT"] = _lckatt
+            self.gui_data_dict["sta"]["ELE LCKATT"] = _lckatt
+            self.gui_data_dict["sta"]["RUD LCKATT"] = _lckatt
+
             self.i_gui.update(self.gui_data_dict)
 
             # print(to_float(i_data.angle_x), "\t", to_float(i_data.angle_y), "\t", to_float(i_data.angle_z))   
