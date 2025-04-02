@@ -1,8 +1,8 @@
 # Copyright Eric Jin 2020
 # Modified in 2024 by Eric Jin 
 
-# TRANS_BAUD = 115200
-TRANS_BAUD = 57600
+TRANS_BAUD = 115200
+# TRANS_BAUD = 57600
 
 from threading import Thread
 from socket import *

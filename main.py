@@ -108,7 +108,7 @@ class Main:
                 # control surface
                 x, y, z = [x * 32767 for x in self.i_joysticks.get_xyz()] # so ugly way
                 self.i_cmd.aileron = int(x)
-                self.i_cmd.elevator = -int(y)
+                self.i_cmd.elevator = int(y)
                 self.i_cmd.rudder = int(z)
 
                 # mode setting
