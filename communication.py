@@ -91,8 +91,9 @@ class planeData:
     elevator, aileron, rudder_l, rudder_r = 0, 0, 0, 0
 
     state = 0
+    opmode = 0
 
-    pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "B", "H"])
+    pack_format = "".join(["=", "hhh"*4, "H", "hh", "b"*4, "BB", "H"])
 
     LOG_FILE_NAME = "log.csv"
 
@@ -108,7 +109,8 @@ class planeData:
                           "roll", "pitch", "yaw",
                           "volt_main",
                           "pressure", "temperature",
-                          "elevator", "aileron", "rudder_l", "rudder_r"])
+                          "elevator", "aileron", "rudder_l", "rudder_r",
+                          "state", "opmode"])
         self.f.flush()
 
     def __del__(self):
@@ -126,7 +128,8 @@ class planeData:
                           self.roll, self.pitch, self.yaw, 
                           self.volt_main, 
                           self.pressure, self.temperature, 
-                          self.elevator, self.aileron, self.rudder_l, self.rudder_r])
+                          self.elevator, self.aileron, self.rudder_l, self.rudder_r, 
+                          self.state, self.opmode])
         self.f.flush()
 
     def unpack(self, packed):
@@ -144,7 +147,7 @@ class planeData:
             self.volt_main,                                             \
             self.pressure, self.temperature,                            \
             self.elevator, self.aileron, self.rudder_l, self.rudder_r,  \
-            self.state, _  = unpacked
+            self.state, self.opmode, _  = unpacked
             
             try:
                 self.log_to_file()

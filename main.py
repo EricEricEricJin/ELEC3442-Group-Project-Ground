@@ -127,7 +127,7 @@ class Main:
             self.i_cmd.sea_level_pa = int(self.i_gui.get_qnh() * 100)
 
             # Attitude
-            self.gui_data_dict["pitch"] = -communication.planeData.imu_r2r(self.i_data.pitch)
+            self.gui_data_dict["pitch"] = communication.planeData.imu_r2r(self.i_data.pitch)
             self.gui_data_dict["roll"] = -communication.planeData.imu_r2r(self.i_data.roll)
             self.gui_data_dict["hdg"] = -communication.planeData.imu_r2r(self.i_data.yaw)
             # print(self.gui_data_dict["roll"], self.gui_data_dict["pitch"], self.gui_data_dict["pitch"])
@@ -174,16 +174,16 @@ class Main:
             # print("pitch = ", self.gui_data_dict["pitch"])
             self.gui_data_dict["state"] = self.i_data.state
 
-            _manual = self.i_mode.mode == 2
+            _manual = self.i_data.opmode == 2
             _lckatt = self.i_mode.mode == 3
 
             self.gui_data_dict["sta"]["AIL MANUAL"] = _manual 
             self.gui_data_dict["sta"]["ELE MANUAL"] = _manual
-            self.gui_data_dict["sta"]["RUD MANUAL"] = _manual
+            self.gui_data_dict["sta"]["RUD MANUAL"] = _manual or _lckatt
 
             self.gui_data_dict["sta"]["AIL LCKATT"] = _lckatt
             self.gui_data_dict["sta"]["ELE LCKATT"] = _lckatt
-            self.gui_data_dict["sta"]["RUD LCKATT"] = _lckatt
+            self.gui_data_dict["sta"]["RUD LCKATT"] = False
 
             self.i_gui.update(self.gui_data_dict)
 
